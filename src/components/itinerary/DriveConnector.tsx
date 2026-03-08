@@ -28,10 +28,18 @@ export default function DriveConnector({
   const [distance, setDistance] = useState(driveDistance || null);
   const [loading, setLoading] = useState(false);
 
+  // Build a coordinate key to detect when origin/dest pair changes (e.g. after reorder)
+  const coordKey = `${originLat},${originLng}->${destLat},${destLng}`;
+  const [lastCoordKey, setLastCoordKey] = useState(coordKey);
+
+  // Reset cached data when coordinates change (reorder happened)
   useEffect(() => {
-    setTime(driveTime || null);
-    setDistance(driveDistance || null);
-  }, [driveTime, driveDistance]);
+    if (coordKey !== lastCoordKey) {
+      setTime(null);
+      setDistance(null);
+      setLastCoordKey(coordKey);
+    }
+  }, [coordKey, lastCoordKey]);
 
   useEffect(() => {
     // If we already have data or don't have both coordinate pairs, skip

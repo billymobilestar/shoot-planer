@@ -86,6 +86,8 @@ export default function ItineraryView({ projectId, canEdit }: Props) {
       const locIdx = newDays[sourceDayIdx].locations.findIndex((l) => l.id === activeId);
       const [movedLoc] = newDays[sourceDayIdx].locations.splice(locIdx, 1);
       movedLoc.shoot_day_id = newDays[destDayIdx].id;
+      movedLoc.drive_time_from_previous = null;
+      movedLoc.drive_distance_from_previous = null;
 
       const overLocIdx = newDays[destDayIdx].locations.findIndex((l) => l.id === overId);
       if (overLocIdx >= 0) {
@@ -121,6 +123,14 @@ export default function ItineraryView({ projectId, canEdit }: Props) {
     if (oldIndex !== -1 && newIndex !== -1 && oldIndex !== newIndex) {
       const [moved] = day.locations.splice(oldIndex, 1);
       day.locations.splice(newIndex, 0, moved);
+    }
+
+    // Clear stale drive data so DriveConnectors recalculate
+    for (const d of newDays) {
+      d.locations.forEach((loc) => {
+        loc.drive_time_from_previous = null;
+        loc.drive_distance_from_previous = null;
+      });
     }
 
     setDays(newDays);

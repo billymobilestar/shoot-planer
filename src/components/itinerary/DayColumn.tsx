@@ -20,6 +20,7 @@ export default function DayColumn({ day, canEdit, projectId, onUpdate }: Props) 
   const [editingTitle, setEditingTitle] = useState(false);
   const [titleValue, setTitleValue] = useState(day.title || "");
   const [showAddLocation, setShowAddLocation] = useState(false);
+  const [insertAtPosition, setInsertAtPosition] = useState<number | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   const { setNodeRef, isOver } = useDroppable({ id: day.id });
@@ -37,6 +38,11 @@ export default function DayColumn({ day, canEdit, projectId, onUpdate }: Props) 
   async function deleteDay() {
     await fetch(`/api/projects/${projectId}/days/${day.id}`, { method: "DELETE" });
     onUpdate();
+  }
+
+  function openInsertAt(position: number) {
+    setInsertAtPosition(position);
+    setShowAddLocation(true);
   }
 
   return (
@@ -117,16 +123,29 @@ export default function DayColumn({ day, canEdit, projectId, onUpdate }: Props) 
             {day.locations.map((location, idx) => (
               <div key={location.id}>
                 {idx > 0 && (
-                  <DriveConnector
-                    driveTime={location.drive_time_from_previous}
-                    driveDistance={location.drive_distance_from_previous}
-                    originLat={day.locations[idx - 1].latitude}
-                    originLng={day.locations[idx - 1].longitude}
-                    destLat={location.latitude}
-                    destLng={location.longitude}
-                    locationId={location.id}
-                    projectId={projectId}
-                  />
+                  <div className="relative group/connector">
+                    <DriveConnector
+                      driveTime={location.drive_time_from_previous}
+                      driveDistance={location.drive_distance_from_previous}
+                      originLat={day.locations[idx - 1].latitude}
+                      originLng={day.locations[idx - 1].longitude}
+                      destLat={location.latitude}
+                      destLng={location.longitude}
+                      locationId={location.id}
+                      projectId={projectId}
+                    />
+                    {/* Insert location between */}
+                    {canEdit && (
+                      <button
+                        onClick={() => openInsertAt(idx)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1 px-2 py-1 rounded-full bg-accent/80 sm:bg-accent text-white text-[10px] font-medium opacity-60 sm:opacity-0 sm:group-hover/connector:opacity-100 hover:opacity-100 active:opacity-100 hover:bg-accent-hover active:bg-accent-hover transition-all shadow-md z-10"
+                        title="Insert location here"
+                      >
+                        <Plus className="w-3 h-3" />
+                        <span className="hidden sm:inline">Insert</span>
+                      </button>
+                    )}
+                  </div>
                 )}
                 <LocationCard
                   location={location}
@@ -147,7 +166,7 @@ export default function DayColumn({ day, canEdit, projectId, onUpdate }: Props) 
 
         {canEdit && (
           <button
-            onClick={() => setShowAddLocation(true)}
+            onClick={() => { setInsertAtPosition(null); setShowAddLocation(true); }}
             className="mt-3 w-full flex items-center justify-center gap-2 py-2.5 border border-dashed border-border rounded-lg text-text-secondary hover:text-accent hover:border-accent transition-colors text-sm"
           >
             <Plus className="w-4 h-4" />
@@ -160,9 +179,9 @@ export default function DayColumn({ day, canEdit, projectId, onUpdate }: Props) 
         <AddLocationModal
           projectId={projectId}
           shootDayId={day.id}
-          position={day.locations.length}
+          position={insertAtPosition ?? day.locations.length}
           onCreated={onUpdate}
-          onClose={() => setShowAddLocation(false)}
+          onClose={() => { setShowAddLocation(false); setInsertAtPosition(null); }}
         />
       )}
     </div>
