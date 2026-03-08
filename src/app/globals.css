@@ -102,3 +102,117 @@ body {
 .cl-formButtonPrimary {
   --clerk-font-family: var(--font-sans);
 }
+
+/* Ensure all Clerk text is visible on dark backgrounds */
+.cl-card {
+  color: var(--color-text-primary) !important;
+}
+
+.cl-internal-b3fm6y,
+.cl-formFieldLabel,
+.cl-formFieldLabelRow label {
+  color: var(--color-text-secondary) !important;
+}
+
+.cl-formFieldInput,
+.cl-phoneNumberInput input {
+  color: var(--color-text-primary) !important;
+  background-color: var(--color-bg-input) !important;
+  border-color: var(--color-border) !important;
+}
+
+.cl-formFieldInput::placeholder {
+  color: var(--color-text-muted) !important;
+}
+
+.cl-footerAction span,
+.cl-footerActionText {
+  color: var(--color-text-muted) !important;
+}
+
+.cl-footerActionLink {
+  color: var(--color-accent) !important;
+}
+
+.cl-dividerText {
+  color: var(--color-text-muted) !important;
+}
+
+.cl-dividerLine {
+  background-color: var(--color-border) !important;
+}
+
+.cl-socialButtonsBlockButton {
+  background-color: var(--color-bg-input) !important;
+  border-color: var(--color-border) !important;
+}
+
+.cl-socialButtonsBlockButtonText {
+  color: var(--color-text-primary) !important;
+}
+
+.cl-headerTitle {
+  color: var(--color-text-primary) !important;
+}
+
+.cl-headerSubtitle {
+  color: var(--color-text-secondary) !important;
+}
+
+.cl-formFieldAction {
+  color: var(--color-accent) !important;
+}
+
+.cl-identityPreview {
+  background-color: var(--color-bg-input) !important;
+  border-color: var(--color-border) !important;
+}
+
+.cl-identityPreviewText {
+  color: var(--color-text-primary) !important;
+}
+
+.cl-identityPreviewEditButton {
+  color: var(--color-accent) !important;
+}
+
+.cl-otpCodeFieldInput {
+  color: var(--color-text-primary) !important;
+  background-color: var(--color-bg-input) !important;
+  border-color: var(--color-border) !important;
+}
+
+.cl-formButtonPrimary {
+  background-color: var(--color-accent) !important;
+  color: white !important;
+}
+
+.cl-formButtonPrimary:hover {
+  background-color: var(--color-accent-hover) !important;
+}
+
+/* Clerk alerts and errors */
+.cl-formFieldErrorText,
+.cl-formFieldWarningText {
+  color: var(--color-danger) !important;
+}
+
+.cl-alert {
+  background-color: var(--color-bg-input) !important;
+  border-color: var(--color-border) !important;
+  color: var(--color-text-primary) !important;
+}
+
+/* Clerk user button menu */
+.cl-userButtonPopoverCard {
+  background-color: var(--color-bg-card) !important;
+  border-color: var(--color-border) !important;
+}
+
+.cl-userButtonPopoverActionButton {
+  color: var(--color-text-primary) !important;
+}
+
+.cl-userButtonPopoverActionButton:hover {
+  background-color: var(--color-bg-card-hover) !important;
+}
