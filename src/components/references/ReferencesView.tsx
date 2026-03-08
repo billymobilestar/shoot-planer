@@ -186,17 +186,18 @@ export default function ReferencesView({ projectId, canEdit }: Props) {
 
   return (
     <div>
-      {/* Tabs */}
-      <div className="flex items-center gap-3 mb-5">
+      {/* Tabs + Add button row */}
+      <div className="flex items-center gap-3 mb-3">
         <div className="flex gap-1 bg-bg-card border border-border rounded-lg p-1">
           <button
             onClick={() => setTab("moodboard")}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm transition-colors ${
+            className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-md text-sm transition-colors ${
               tab === "moodboard" ? "bg-accent text-white" : "text-text-secondary hover:text-text-primary"
             }`}
           >
             <Palette className="w-3.5 h-3.5" />
-            Moodboard
+            <span className="hidden sm:inline">Moodboard</span>
+            <span className="sm:hidden">Board</span>
             {references.length > 0 && (
               <span className={`text-xs ${tab === "moodboard" ? "text-white/70" : "text-text-muted"}`}>
                 {references.length}
@@ -205,12 +206,13 @@ export default function ReferencesView({ projectId, canEdit }: Props) {
           </button>
           <button
             onClick={() => setTab("location")}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm transition-colors ${
+            className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-md text-sm transition-colors ${
               tab === "location" ? "bg-accent text-white" : "text-text-secondary hover:text-text-primary"
             }`}
           >
             <Camera className="w-3.5 h-3.5" />
-            Location Photos
+            <span className="hidden sm:inline">Location Photos</span>
+            <span className="sm:hidden">Photos</span>
             {locationSections.length > 0 && (
               <span className={`text-xs ${tab === "location" ? "text-white/70" : "text-text-muted"}`}>
                 {locationSections.reduce((sum, s) => sum + s.items.length, 0)}
@@ -221,119 +223,124 @@ export default function ReferencesView({ projectId, canEdit }: Props) {
 
         <div className="flex-1" />
 
-        {/* Filters & Sort (moodboard tab only) */}
-        {tab === "moodboard" && (
-          <div className="flex items-center gap-3">
-            {/* Sort */}
-            <div className="flex items-center gap-1.5">
-              <ArrowUpDown className="w-3.5 h-3.5 text-text-muted" />
-              <select
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value as "newest" | "oldest")}
-                className="bg-bg-input border border-border rounded-lg px-3 py-1.5 text-text-primary text-sm focus:outline-none focus:border-accent"
-              >
-                <option value="newest">Newest First</option>
-                <option value="oldest">Oldest First</option>
-              </select>
-            </div>
-
-            {/* Location filter */}
-            {assignableLocations.length > 0 && (
-              <div ref={locationFilterRef} className="relative">
-                <button
-                  onClick={() => setLocationFilterOpen((v) => !v)}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm border transition-colors ${
-                    locationFilter.length > 0
-                      ? "bg-accent/10 border-accent/30 text-accent"
-                      : "bg-bg-input border-border text-text-primary hover:border-border-light"
-                  }`}
-                >
-                  <MapPin className="w-3.5 h-3.5" />
-                  {locationFilter.length === 0
-                    ? "All Locations"
-                    : `${locationFilter.length} location${locationFilter.length > 1 ? "s" : ""}`}
-                  {locationFilter.length > 0 && (
-                    <button
-                      onClick={(e) => { e.stopPropagation(); setLocationFilter([]); }}
-                      className="ml-1 hover:text-red-400 transition-colors"
-                    >
-                      <X className="w-3 h-3" />
-                    </button>
-                  )}
-                </button>
-                {locationFilterOpen && (
-                  <div className="absolute z-20 mt-1 right-0 min-w-48 bg-bg-card border border-border rounded-lg shadow-lg overflow-hidden">
-                    <div className="max-h-56 overflow-y-auto">
-                      {assignableLocations.map((loc) => {
-                        const sel = locationFilter.includes(loc.id);
-                        return (
-                          <button
-                            key={loc.id}
-                            onClick={() => toggleLocationFilter(loc.id)}
-                            className={`w-full flex items-center gap-2.5 px-3 py-2 text-left text-sm transition-colors ${
-                              sel ? "bg-accent/10 text-accent" : "text-text-primary hover:bg-bg-primary"
-                            }`}
-                          >
-                            <div className={`w-4 h-4 rounded border-2 flex items-center justify-center shrink-0 transition-colors ${
-                              sel ? "bg-accent border-accent" : "border-border"
-                            }`}>
-                              {sel && <Check className="w-3 h-3 text-white" />}
-                            </div>
-                            <MapPin className={`w-3.5 h-3.5 shrink-0 ${sel ? "text-accent" : "text-text-muted"}`} />
-                            <span className="truncate">{loc.name}</span>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {allBoards.length > 0 && (
-              <div className="flex items-center gap-1.5">
-                <Layers className="w-3.5 h-3.5 text-text-muted" />
-                <select
-                  value={boardFilter}
-                  onChange={(e) => setBoardFilter(e.target.value)}
-                  className="bg-bg-input border border-border rounded-lg px-3 py-1.5 text-text-primary text-sm focus:outline-none focus:border-accent"
-                >
-                  <option value="all">All Boards</option>
-                  <option value="General">General</option>
-                  {allBoards.map((b) => (
-                    <option key={b} value={b}>{b}</option>
-                  ))}
-                </select>
-              </div>
-            )}
-            {allTags.length > 0 && (
-              <div className="flex items-center gap-1.5">
-                <Tag className="w-3.5 h-3.5 text-text-muted" />
-                <select
-                  value={tagFilter}
-                  onChange={(e) => setTagFilter(e.target.value)}
-                  className="bg-bg-input border border-border rounded-lg px-3 py-1.5 text-text-primary text-sm focus:outline-none focus:border-accent"
-                >
-                  <option value="all">All Tags</option>
-                  {allTags.map((t) => (
-                    <option key={t} value={t}>{t}</option>
-                  ))}
-                </select>
-              </div>
-            )}
-          </div>
-        )}
-
         {tab === "moodboard" && canEdit && (
           <button
             onClick={() => setShowAdd(true)}
-            className="flex items-center gap-2 bg-accent hover:bg-accent-hover text-white rounded-lg px-4 py-2 text-sm font-medium transition-colors"
+            className="flex items-center gap-2 bg-accent hover:bg-accent-hover text-white rounded-lg px-3 sm:px-4 py-2 text-sm font-medium transition-colors"
           >
             <Plus className="w-4 h-4" />
-            Add
+            <span className="hidden sm:inline">Add</span>
           </button>
         )}
       </div>
+
+      {/* Filters & Sort (moodboard tab only) — separate row */}
+      {tab === "moodboard" && (
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3 mb-5">
+          {/* Sort */}
+          <div className="flex items-center gap-1.5">
+            <ArrowUpDown className="w-3.5 h-3.5 text-text-muted" />
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value as "newest" | "oldest")}
+              className="bg-bg-input border border-border rounded-lg px-2.5 sm:px-3 py-1.5 text-text-primary text-sm focus:outline-none focus:border-accent"
+            >
+              <option value="newest">Newest</option>
+              <option value="oldest">Oldest</option>
+            </select>
+          </div>
+
+          {/* Location filter */}
+          {assignableLocations.length > 0 && (
+            <div ref={locationFilterRef} className="relative">
+              <button
+                onClick={() => setLocationFilterOpen((v) => !v)}
+                className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg text-sm border transition-colors ${
+                  locationFilter.length > 0
+                    ? "bg-accent/10 border-accent/30 text-accent"
+                    : "bg-bg-input border-border text-text-primary hover:border-border-light"
+                }`}
+              >
+                <MapPin className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">
+                  {locationFilter.length === 0
+                    ? "All Locations"
+                    : `${locationFilter.length} location${locationFilter.length > 1 ? "s" : ""}`}
+                </span>
+                <span className="sm:hidden">
+                  {locationFilter.length === 0 ? "Locations" : locationFilter.length}
+                </span>
+                {locationFilter.length > 0 && (
+                  <button
+                    onClick={(e) => { e.stopPropagation(); setLocationFilter([]); }}
+                    className="ml-1 hover:text-red-400 transition-colors"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                )}
+              </button>
+              {locationFilterOpen && (
+                <div className="absolute z-20 mt-1 left-0 sm:right-0 sm:left-auto min-w-48 bg-bg-card border border-border rounded-lg shadow-lg overflow-hidden">
+                  <div className="max-h-56 overflow-y-auto">
+                    {assignableLocations.map((loc) => {
+                      const sel = locationFilter.includes(loc.id);
+                      return (
+                        <button
+                          key={loc.id}
+                          onClick={() => toggleLocationFilter(loc.id)}
+                          className={`w-full flex items-center gap-2.5 px-3 py-2 text-left text-sm transition-colors ${
+                            sel ? "bg-accent/10 text-accent" : "text-text-primary hover:bg-bg-primary"
+                          }`}
+                        >
+                          <div className={`w-4 h-4 rounded border-2 flex items-center justify-center shrink-0 transition-colors ${
+                            sel ? "bg-accent border-accent" : "border-border"
+                          }`}>
+                            {sel && <Check className="w-3 h-3 text-white" />}
+                          </div>
+                          <MapPin className={`w-3.5 h-3.5 shrink-0 ${sel ? "text-accent" : "text-text-muted"}`} />
+                          <span className="truncate">{loc.name}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {allBoards.length > 0 && (
+            <div className="flex items-center gap-1.5">
+              <Layers className="w-3.5 h-3.5 text-text-muted" />
+              <select
+                value={boardFilter}
+                onChange={(e) => setBoardFilter(e.target.value)}
+                className="bg-bg-input border border-border rounded-lg px-2.5 sm:px-3 py-1.5 text-text-primary text-sm focus:outline-none focus:border-accent"
+              >
+                <option value="all">All Boards</option>
+                <option value="General">General</option>
+                {allBoards.map((b) => (
+                  <option key={b} value={b}>{b}</option>
+                ))}
+              </select>
+            </div>
+          )}
+          {allTags.length > 0 && (
+            <div className="flex items-center gap-1.5">
+              <Tag className="w-3.5 h-3.5 text-text-muted" />
+              <select
+                value={tagFilter}
+                onChange={(e) => setTagFilter(e.target.value)}
+                className="bg-bg-input border border-border rounded-lg px-2.5 sm:px-3 py-1.5 text-text-primary text-sm focus:outline-none focus:border-accent"
+              >
+                <option value="all">All Tags</option>
+                {allTags.map((t) => (
+                  <option key={t} value={t}>{t}</option>
+                ))}
+              </select>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* MOODBOARD TAB */}
       {tab === "moodboard" && (

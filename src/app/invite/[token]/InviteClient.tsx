@@ -114,10 +114,10 @@ export default function InviteClient({ token }: { token: string }) {
               </p>
               <p className="text-text-secondary text-sm mb-6">Sign in or create an account to join this project.</p>
               <div className="flex gap-3 justify-center">
-                <Link href="/sign-in" className="bg-accent hover:bg-accent-hover text-white rounded-lg px-6 py-2.5 font-medium transition-colors">
+                <Link href={`/sign-in?redirect_url=${encodeURIComponent(`/invite/${token}`)}`} className="bg-accent hover:bg-accent-hover text-white rounded-lg px-6 py-2.5 font-medium transition-colors">
                   Sign In
                 </Link>
-                <Link href="/sign-up" className="bg-bg-card-hover border border-border text-text-primary rounded-lg px-6 py-2.5 transition-colors">
+                <Link href={`/sign-up?redirect_url=${encodeURIComponent(`/invite/${token}`)}`} className="bg-bg-card-hover border border-border text-text-primary rounded-lg px-6 py-2.5 transition-colors">
                   Sign Up
                 </Link>
               </div>

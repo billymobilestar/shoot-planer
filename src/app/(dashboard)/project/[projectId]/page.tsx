@@ -215,20 +215,21 @@ export default function ProjectPage({ params }: { params: Promise<{ projectId: s
       </div>
 
       {/* Tabs */}
-      <div className="border-b border-border mb-6">
-        <div className="flex gap-1">
+      <div className="border-b border-border mb-6 overflow-x-auto">
+        <div className="flex gap-1 min-w-0">
           {tabs.map((tab) => (
             <button
               key={tab.id}
               onClick={() => switchTab(tab.id)}
-              className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
+              className={`flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-4 py-3 text-xs sm:text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
                 activeTab === tab.id
                   ? "border-accent text-accent"
                   : "border-transparent text-text-secondary hover:text-text-primary"
               }`}
             >
               <tab.icon className="w-4 h-4" />
-              {tab.label}
+              <span className="hidden sm:inline">{tab.label}</span>
+              <span className="sm:hidden">{tab.id === "shots" ? "Shots" : tab.id === "itinerary" ? "Plan" : tab.label}</span>
             </button>
           ))}
         </div>

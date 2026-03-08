@@ -12,7 +12,7 @@ import {
   DragOverlay,
   DragStartEvent,
 } from "@dnd-kit/core";
-import { Plus, Map, CalendarDays, MapPin, Route } from "lucide-react";
+import { Plus, CalendarDays, MapPin, Route, Clock } from "lucide-react";
 import { ShootDayWithLocations, Location } from "@/lib/types";
 import { generateGoogleMapsUrl } from "@/lib/utils";
 import DayColumn from "./DayColumn";
@@ -145,6 +145,21 @@ export default function ItineraryView({ projectId, canEdit }: Props) {
   const totalLocations = allLocations.length;
   const mapsUrl = generateGoogleMapsUrl(allLocations);
 
+  // Calculate total travel time by parsing drive_time_from_previous strings
+  const totalTravelMinutes = allLocations.reduce((sum, loc) => {
+    const t = loc.drive_time_from_previous;
+    if (!t) return sum;
+    let mins = 0;
+    const hourMatch = t.match(/(\d+)\s*hour/);
+    const minMatch = t.match(/(\d+)\s*min/);
+    if (hourMatch) mins += parseInt(hourMatch[1]) * 60;
+    if (minMatch) mins += parseInt(minMatch[1]);
+    return sum + mins;
+  }, 0);
+
+  const travelHours = Math.floor(totalTravelMinutes / 60);
+  const travelMins = totalTravelMinutes % 60;
+
   if (loading) {
     return (
       <div className="space-y-6">
@@ -170,6 +185,18 @@ export default function ItineraryView({ projectId, canEdit }: Props) {
           <span className="text-text-primary font-medium">{totalLocations}</span>
           <span className="text-text-secondary">locations</span>
         </div>
+        {totalTravelMinutes > 0 && (
+          <>
+            <div className="w-px h-4 bg-border" />
+            <div className="flex items-center gap-2 text-sm">
+              <Clock className="w-4 h-4 text-accent" />
+              <span className="text-text-primary font-medium">
+                {travelHours > 0 ? `${travelHours}h ${travelMins}m` : `${travelMins}m`}
+              </span>
+              <span className="text-text-secondary">travel</span>
+            </div>
+          </>
+        )}
         <div className="flex-1" />
         {totalLocations > 0 && (
           <a

@@ -1,4 +1,15 @@
+"use client";
+
 import { SignUp } from "@clerk/nextjs";
+import { useSearchParams } from "next/navigation";
+import { Suspense } from "react";
+
+function SignUpForm() {
+  const searchParams = useSearchParams();
+  const redirectUrl = searchParams.get("redirect_url") || "/dashboard";
+
+  return <SignUp forceRedirectUrl={redirectUrl} />;
+}
 
 export default function SignUpPage() {
   return (
@@ -7,7 +18,9 @@ export default function SignUpPage() {
         <h1 className="text-2xl font-bold text-text-primary">ShootPlaner</h1>
         <p className="text-text-muted text-sm mt-1">Plan your shoots collaboratively</p>
       </div>
-      <SignUp forceRedirectUrl="/dashboard" />
+      <Suspense>
+        <SignUpForm />
+      </Suspense>
     </div>
   );
 }
