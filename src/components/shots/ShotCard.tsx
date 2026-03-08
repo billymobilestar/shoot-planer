@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { Trash2, MapPin, ChevronDown, ChevronUp, Check } from "lucide-react";
-import { Shot, Location, ShotStatus } from "@/lib/types";
+import { Trash2, MapPin, ChevronDown, ChevronUp, Check, Upload, Image as ImageIcon, X } from "lucide-react";
+import { Shot, Location, ShotStatus, ShootReference } from "@/lib/types";
 
 const statusStyles: Record<ShotStatus, string> = {
   planned: "bg-warning/10 text-warning",
@@ -33,14 +33,18 @@ const shotTypes = [
 interface Props {
   shot: Shot;
   locations: Location[];
+  references: ShootReference[];
   canEdit: boolean;
   projectId: string;
   onUpdate: () => void;
 }
 
-export default function ShotCard({ shot, locations, canEdit, projectId, onUpdate }: Props) {
+export default function ShotCard({ shot, locations, references, canEdit, projectId, onUpdate }: Props) {
   const [expanded, setExpanded] = useState(!canEdit);
   const [statusOpen, setStatusOpen] = useState(false);
+  const [showImagePicker, setShowImagePicker] = useState(false);
+  const [editImageUrl, setEditImageUrl] = useState(shot.image_url || "");
+  const [uploadingImage, setUploadingImage] = useState(false);
   const statusRef = useRef<HTMLDivElement>(null);
   const [form, setForm] = useState({
     title: shot.title,
@@ -62,6 +66,7 @@ export default function ShotCard({ shot, locations, canEdit, projectId, onUpdate
   }, [statusOpen]);
 
   const assignedLocation = locations.find((l) => l.id === shot.location_id);
+  const existingImages = references.filter((r) => r.image_url);
 
   async function save() {
     await fetch(`/api/projects/${projectId}/shots/${shot.id}`, {
@@ -74,6 +79,7 @@ export default function ShotCard({ shot, locations, canEdit, projectId, onUpdate
         status: form.status,
         location_id: form.location_id || null,
         notes: form.notes || null,
+        image_url: editImageUrl || null,
       }),
     });
     onUpdate();
@@ -92,6 +98,21 @@ export default function ShotCard({ shot, locations, canEdit, projectId, onUpdate
     });
     setForm((f) => ({ ...f, status }));
     onUpdate();
+  }
+
+  async function handleImageUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadingImage(true);
+    const fd = new FormData();
+    fd.append("file", file);
+    const res = await fetch("/api/upload", { method: "POST", body: fd });
+    if (res.ok) {
+      const { url } = await res.json();
+      setEditImageUrl(url);
+      setShowImagePicker(false);
+    }
+    setUploadingImage(false);
   }
 
   return (
@@ -185,6 +206,77 @@ export default function ShotCard({ shot, locations, canEdit, projectId, onUpdate
               rows={2}
               className="w-full bg-bg-input border border-border rounded-lg px-3 py-2 text-text-primary text-sm focus:outline-none focus:border-accent resize-none"
             />
+
+            {/* Reference image editor */}
+            <div>
+              <label className="block text-xs text-text-muted mb-1">Reference Image</label>
+              {editImageUrl ? (
+                <div className="relative">
+                  <img src={editImageUrl} alt="" className="w-full rounded-lg object-contain max-h-32" />
+                  <button
+                    type="button"
+                    onClick={() => { setEditImageUrl(""); setShowImagePicker(false); }}
+                    className="absolute top-1.5 right-1.5 bg-black/60 rounded-full p-1 text-white hover:bg-black/80"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              ) : showImagePicker ? (
+                <div className="space-y-2">
+                  <label className="flex items-center justify-center gap-2 py-3 border-2 border-dashed border-border rounded-lg text-text-secondary hover:text-accent hover:border-accent transition-colors cursor-pointer text-xs">
+                    <Upload className="w-3.5 h-3.5" />
+                    {uploadingImage ? "Uploading..." : "Upload new"}
+                    <input type="file" accept="image/*" onChange={handleImageUpload} className="hidden" />
+                  </label>
+                  {existingImages.length > 0 && (
+                    <>
+                      <div className="flex items-center gap-2">
+                        <div className="flex-1 border-t border-border" />
+                        <span className="text-[10px] text-text-muted">from moodboard</span>
+                        <div className="flex-1 border-t border-border" />
+                      </div>
+                      <div className="grid grid-cols-4 gap-1.5 max-h-32 overflow-y-auto">
+                        {existingImages.map((ref) => (
+                          <button
+                            key={ref.id}
+                            type="button"
+                            onClick={() => { setEditImageUrl(ref.image_url); setShowImagePicker(false); }}
+                            className="relative aspect-square rounded-lg overflow-hidden border-2 border-border hover:border-accent transition-colors group/img"
+                          >
+                            <img src={ref.image_url} alt={ref.title || ""} className="w-full h-full object-cover" />
+                            <div className="absolute inset-0 bg-accent/0 group-hover/img:bg-accent/20 transition-colors flex items-center justify-center">
+                              <Check className="w-4 h-4 text-white opacity-0 group-hover/img:opacity-100 drop-shadow-lg transition-opacity" />
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                    </>
+                  )}
+                  <button type="button" onClick={() => setShowImagePicker(false)} className="w-full text-center text-[11px] text-text-muted hover:text-text-primary py-0.5">
+                    Cancel
+                  </button>
+                </div>
+              ) : (
+                <div className="flex gap-2">
+                  <label className="flex-1 flex items-center justify-center gap-1.5 py-2.5 border-2 border-dashed border-border rounded-lg text-text-secondary hover:text-accent hover:border-accent transition-colors cursor-pointer text-xs">
+                    <Upload className="w-3.5 h-3.5" />
+                    Upload
+                    <input type="file" accept="image/*" onChange={handleImageUpload} className="hidden" />
+                  </label>
+                  {existingImages.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setShowImagePicker(true)}
+                      className="flex-1 flex items-center justify-center gap-1.5 py-2.5 border-2 border-dashed border-border rounded-lg text-text-secondary hover:text-accent hover:border-accent transition-colors text-xs"
+                    >
+                      <ImageIcon className="w-3.5 h-3.5" />
+                      Existing
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+
             <div className="grid grid-cols-2 gap-3">
               <select
                 value={form.shot_type}

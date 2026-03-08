@@ -1,12 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { X, Upload } from "lucide-react";
-import { Location } from "@/lib/types";
+import { X, Upload, Image as ImageIcon, Check } from "lucide-react";
+import { Location, ShootReference } from "@/lib/types";
 
 interface Props {
   projectId: string;
   locations: Location[];
+  references: ShootReference[];
   onCreated: () => void;
   onClose: () => void;
 }
@@ -16,7 +17,7 @@ const shotTypes = [
   "Tracking", "Handheld", "Timelapse", "Slow Motion", "POV", "Other",
 ];
 
-export default function AddShotModal({ projectId, locations, onCreated, onClose }: Props) {
+export default function AddShotModal({ projectId, locations, references, onCreated, onClose }: Props) {
   const [form, setForm] = useState({
     title: "",
     description: "",
@@ -26,6 +27,7 @@ export default function AddShotModal({ projectId, locations, onCreated, onClose 
   const [imageUrl, setImageUrl] = useState("");
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [showPicker, setShowPicker] = useState(false);
 
   async function handleUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -37,8 +39,14 @@ export default function AddShotModal({ projectId, locations, onCreated, onClose 
     if (res.ok) {
       const { url } = await res.json();
       setImageUrl(url);
+      setShowPicker(false);
     }
     setUploading(false);
+  }
+
+  function selectExisting(url: string) {
+    setImageUrl(url);
+    setShowPicker(false);
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -61,6 +69,8 @@ export default function AddShotModal({ projectId, locations, onCreated, onClose 
     onCreated();
     onClose();
   }
+
+  const existingImages = references.filter((r) => r.image_url);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={onClose}>
@@ -124,16 +134,67 @@ export default function AddShotModal({ projectId, locations, onCreated, onClose 
             {imageUrl ? (
               <div className="relative">
                 <img src={imageUrl} alt="Preview" className="w-full rounded-lg object-contain max-h-40" />
-                <button type="button" onClick={() => setImageUrl("")} className="absolute top-2 right-2 bg-black/60 rounded-full p-1 text-white">
+                <button type="button" onClick={() => setImageUrl("")} className="absolute top-2 right-2 bg-black/60 rounded-full p-1 text-white hover:bg-black/80">
                   <X className="w-4 h-4" />
                 </button>
               </div>
+            ) : showPicker ? (
+              <div className="space-y-3">
+                {/* Upload option */}
+                <label className="flex items-center justify-center gap-2 py-4 border-2 border-dashed border-border rounded-lg text-text-secondary hover:text-accent hover:border-accent transition-colors cursor-pointer">
+                  <Upload className="w-4 h-4" />
+                  <span className="text-sm">{uploading ? "Uploading..." : "Upload new image"}</span>
+                  <input type="file" accept="image/*" onChange={handleUpload} className="hidden" />
+                </label>
+
+                {/* Existing images grid */}
+                {existingImages.length > 0 && (
+                  <>
+                    <div className="flex items-center gap-2">
+                      <div className="flex-1 border-t border-border" />
+                      <span className="text-[11px] text-text-muted uppercase tracking-wider">Or choose from moodboard</span>
+                      <div className="flex-1 border-t border-border" />
+                    </div>
+                    <div className="grid grid-cols-4 gap-1.5 max-h-44 overflow-y-auto">
+                      {existingImages.map((ref) => (
+                        <button
+                          key={ref.id}
+                          type="button"
+                          onClick={() => selectExisting(ref.image_url)}
+                          className="relative aspect-square rounded-lg overflow-hidden border-2 border-border hover:border-accent transition-colors group/img"
+                        >
+                          <img src={ref.image_url} alt={ref.title || ""} className="w-full h-full object-cover" />
+                          <div className="absolute inset-0 bg-accent/0 group-hover/img:bg-accent/20 transition-colors flex items-center justify-center">
+                            <Check className="w-5 h-5 text-white opacity-0 group-hover/img:opacity-100 drop-shadow-lg transition-opacity" />
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  </>
+                )}
+
+                <button type="button" onClick={() => setShowPicker(false)} className="w-full text-center text-xs text-text-muted hover:text-text-primary transition-colors py-1">
+                  Cancel
+                </button>
+              </div>
             ) : (
-              <label className="flex items-center justify-center gap-2 py-6 border-2 border-dashed border-border rounded-lg text-text-secondary hover:text-accent hover:border-accent transition-colors cursor-pointer">
-                <Upload className="w-5 h-5" />
-                <span className="text-sm">{uploading ? "Uploading..." : "Upload image"}</span>
-                <input type="file" accept="image/*" onChange={handleUpload} className="hidden" />
-              </label>
+              <div className="flex gap-2">
+                <label className="flex-1 flex items-center justify-center gap-2 py-4 border-2 border-dashed border-border rounded-lg text-text-secondary hover:text-accent hover:border-accent transition-colors cursor-pointer">
+                  <Upload className="w-4 h-4" />
+                  <span className="text-sm">{uploading ? "Uploading..." : "Upload"}</span>
+                  <input type="file" accept="image/*" onChange={handleUpload} className="hidden" />
+                </label>
+                {existingImages.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setShowPicker(true)}
+                    className="flex-1 flex items-center justify-center gap-2 py-4 border-2 border-dashed border-border rounded-lg text-text-secondary hover:text-accent hover:border-accent transition-colors"
+                  >
+                    <ImageIcon className="w-4 h-4" />
+                    <span className="text-sm">Existing</span>
+                  </button>
+                )}
+              </div>
             )}
           </div>
 

@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { Plus, ListChecks } from "lucide-react";
-import { Shot, Location, ShotStatus } from "@/lib/types";
+import { Shot, Location, ShotStatus, ShootReference } from "@/lib/types";
 import ShotCard from "./ShotCard";
 import AddShotModal from "./AddShotModal";
 
@@ -22,18 +22,21 @@ const statusFilters: { label: string; value: ShotStatus | "all" }[] = [
 export default function ShotListView({ projectId, canEdit }: Props) {
   const [shots, setShots] = useState<Shot[]>([]);
   const [locations, setLocations] = useState<Location[]>([]);
+  const [references, setReferences] = useState<ShootReference[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAdd, setShowAdd] = useState(false);
   const [statusFilter, setStatusFilter] = useState<ShotStatus | "all">("all");
   const [locationFilter, setLocationFilter] = useState("all");
 
   const fetchData = useCallback(async () => {
-    const [shotsRes, locsRes] = await Promise.all([
+    const [shotsRes, locsRes, refsRes] = await Promise.all([
       fetch(`/api/projects/${projectId}/shots`),
       fetch(`/api/projects/${projectId}/locations`),
+      fetch(`/api/projects/${projectId}/references`),
     ]);
     if (shotsRes.ok) setShots(await shotsRes.json());
     if (locsRes.ok) setLocations(await locsRes.json());
+    if (refsRes.ok) setReferences(await refsRes.json());
     setLoading(false);
   }, [projectId]);
 
@@ -135,6 +138,7 @@ export default function ShotListView({ projectId, canEdit }: Props) {
               key={shot.id}
               shot={shot}
               locations={locations}
+              references={references}
               canEdit={canEdit}
               projectId={projectId}
               onUpdate={fetchData}
@@ -147,6 +151,7 @@ export default function ShotListView({ projectId, canEdit }: Props) {
         <AddShotModal
           projectId={projectId}
           locations={locations}
+          references={references}
           onCreated={fetchData}
           onClose={() => setShowAdd(false)}
         />
