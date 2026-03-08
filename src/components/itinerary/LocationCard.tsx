@@ -319,7 +319,7 @@ export default function LocationCard({ location, canEdit, projectId, onUpdate, i
         <div className="px-4 pb-4 pt-2 border-t border-border">
           <button
             onClick={() => setShowNotes(!showNotes)}
-            className="flex items-center gap-2 text-sm text-text-secondary hover:text-text-primary transition-colors"
+            className="flex items-center gap-2 text-sm text-text-secondary hover:text-text-primary transition-colors py-1"
           >
             <MessageSquare className="w-4 h-4" />
             Comments

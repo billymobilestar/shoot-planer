@@ -111,12 +111,12 @@ export default function ReferenceCard({ reference, locations, boards, canEdit, p
           onClick={() => onImageClick(reference.image_url, reference.title || "Reference")}
         />
         {canEdit && !editing && (
-          <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-            <button onClick={() => setEditing(true)} className="bg-black/60 rounded-full p-1.5 text-white hover:bg-black/80">
-              <Pencil className="w-3 h-3" />
+          <div className="absolute top-2 right-2 flex gap-1.5 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
+            <button onClick={() => setEditing(true)} className="bg-black/60 rounded-full p-2 sm:p-1.5 text-white hover:bg-black/80 active:bg-black/80">
+              <Pencil className="w-3.5 h-3.5 sm:w-3 sm:h-3" />
             </button>
-            <button onClick={deleteRef} className="bg-black/60 rounded-full p-1.5 text-white hover:bg-red-600">
-              <Trash2 className="w-3 h-3" />
+            <button onClick={deleteRef} className="bg-black/60 rounded-full p-2 sm:p-1.5 text-white hover:bg-red-600 active:bg-red-600">
+              <Trash2 className="w-3.5 h-3.5 sm:w-3 sm:h-3" />
             </button>
           </div>
         )}

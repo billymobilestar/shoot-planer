@@ -59,15 +59,15 @@ export default function LocationNotes({ projectId, locationId }: Props) {
                 <div className="flex items-center gap-2 mb-1">
                   <span className="text-xs font-medium text-text-primary">{note.user_name || "Unknown"}</span>
                   <span className="text-xs text-text-muted">{formatTimestamp(note.created_at)}</span>
+                  <button
+                    onClick={() => deleteNote(note.id)}
+                    className="ml-auto opacity-100 sm:opacity-0 sm:group-hover:opacity-100 text-text-muted hover:text-danger transition-all p-0.5 shrink-0"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
                 </div>
                 <p className="text-sm text-text-secondary">{note.content}</p>
               </div>
-              <button
-                onClick={() => deleteNote(note.id)}
-                className="opacity-0 group-hover:opacity-100 text-text-muted hover:text-danger transition-all mt-2"
-              >
-                <Trash2 className="w-3.5 h-3.5" />
-              </button>
             </div>
           ))}
         </div>
@@ -78,13 +78,13 @@ export default function LocationNotes({ projectId, locationId }: Props) {
           value={content}
           onChange={(e) => setContent(e.target.value)}
           placeholder="Add a comment..."
-          className="flex-1 bg-bg-input border border-border rounded-lg px-3 py-2 text-text-primary text-sm placeholder:text-text-muted focus:outline-none focus:border-accent"
+          className="flex-1 bg-bg-input border border-border rounded-lg px-3 py-2.5 text-text-primary text-sm placeholder:text-text-muted focus:outline-none focus:border-accent"
           onKeyDown={(e) => { if (e.key === "Enter") addNote(); }}
         />
         <button
           onClick={addNote}
           disabled={!content.trim()}
-          className="bg-accent hover:bg-accent-hover text-white rounded-lg px-3 py-2 transition-colors disabled:opacity-50"
+          className="bg-accent hover:bg-accent-hover text-white rounded-lg px-3.5 py-2.5 transition-colors disabled:opacity-50"
         >
           <Send className="w-4 h-4" />
         </button>
