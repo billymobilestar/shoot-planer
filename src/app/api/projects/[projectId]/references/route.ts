@@ -50,7 +50,8 @@ export async function POST(request: Request, { params }: { params: Promise<{ pro
     .from("shoot_references")
     .insert({
       project_id: projectId,
-      image_url: body.image_url,
+      image_url: body.image_url || "",
+      link_url: body.link_url || null,
       title: body.title || null,
       description: body.description || null,
       location_id: body.location_ids?.length ? body.location_ids[0] : (body.location_id || null),

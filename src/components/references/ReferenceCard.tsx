@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { Pencil, Trash2, MapPin, X, Check, Plus, StickyNote, ChevronDown } from "lucide-react";
+import { Pencil, Trash2, MapPin, X, Check, Plus, StickyNote, ChevronDown, Link2, ExternalLink } from "lucide-react";
 import { ShootReference, Location } from "@/lib/types";
 import ReferenceInteractions from "./ReferenceInteractions";
 
@@ -101,26 +101,73 @@ export default function ReferenceCard({ reference, locations, boards, canEdit, p
     onUpdate();
   }
 
+  const isLink = !!reference.link_url;
+  const hasImage = !!reference.image_url;
+
+  let linkHostname = "";
+  if (isLink) {
+    try { linkHostname = new URL(reference.link_url!).hostname; } catch {}
+  }
+
   return (
     <div className="bg-bg-card border border-border rounded-xl overflow-hidden break-inside-avoid hover:border-border-light transition-colors group">
-      <div className="relative">
-        <img
-          src={reference.image_url}
-          alt={reference.title || "Reference"}
-          className="w-full object-contain cursor-pointer"
-          onClick={() => onImageClick(reference.image_url, reference.title || "Reference")}
-        />
-        {canEdit && !editing && (
-          <div className="absolute top-2 right-2 flex gap-1.5 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
-            <button onClick={() => setEditing(true)} className="bg-black/60 rounded-full p-2 sm:p-1.5 text-white hover:bg-black/80 active:bg-black/80">
-              <Pencil className="w-3.5 h-3.5 sm:w-3 sm:h-3" />
-            </button>
-            <button onClick={deleteRef} className="bg-black/60 rounded-full p-2 sm:p-1.5 text-white hover:bg-red-600 active:bg-red-600">
-              <Trash2 className="w-3.5 h-3.5 sm:w-3 sm:h-3" />
-            </button>
-          </div>
-        )}
-      </div>
+      {/* Image or Link hero */}
+      {hasImage ? (
+        <div className="relative">
+          <img
+            src={reference.image_url}
+            alt={reference.title || "Reference"}
+            className="w-full object-contain cursor-pointer"
+            onClick={() => isLink ? window.open(reference.link_url!, "_blank") : onImageClick(reference.image_url, reference.title || "Reference")}
+          />
+          {isLink && (
+            <div className="absolute bottom-2 left-2 flex items-center gap-1 bg-black/60 backdrop-blur-sm rounded-full px-2 py-1">
+              <Link2 className="w-3 h-3 text-white" />
+              <span className="text-[10px] text-white/80 truncate max-w-24">{linkHostname}</span>
+            </div>
+          )}
+          {canEdit && !editing && (
+            <div className="absolute top-2 right-2 flex gap-1.5 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
+              <button onClick={() => setEditing(true)} className="bg-black/60 rounded-full p-2 sm:p-1.5 text-white hover:bg-black/80 active:bg-black/80">
+                <Pencil className="w-3.5 h-3.5 sm:w-3 sm:h-3" />
+              </button>
+              <button onClick={deleteRef} className="bg-black/60 rounded-full p-2 sm:p-1.5 text-white hover:bg-red-600 active:bg-red-600">
+                <Trash2 className="w-3.5 h-3.5 sm:w-3 sm:h-3" />
+              </button>
+            </div>
+          )}
+        </div>
+      ) : isLink ? (
+        <div className="relative">
+          <a
+            href={reference.link_url!}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="block p-6 bg-bg-primary"
+          >
+            <div className="flex flex-col items-center gap-2 text-center">
+              <div className="w-12 h-12 rounded-xl bg-accent/10 flex items-center justify-center">
+                <Link2 className="w-6 h-6 text-accent" />
+              </div>
+              <span className="text-xs text-text-muted truncate w-full">{linkHostname}</span>
+              <div className="flex items-center gap-1 text-[10px] text-accent">
+                <ExternalLink className="w-3 h-3" />
+                Open link
+              </div>
+            </div>
+          </a>
+          {canEdit && !editing && (
+            <div className="absolute top-2 right-2 flex gap-1.5 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
+              <button onClick={() => setEditing(true)} className="bg-black/60 rounded-full p-2 sm:p-1.5 text-white hover:bg-black/80 active:bg-black/80">
+                <Pencil className="w-3.5 h-3.5 sm:w-3 sm:h-3" />
+              </button>
+              <button onClick={deleteRef} className="bg-black/60 rounded-full p-2 sm:p-1.5 text-white hover:bg-red-600 active:bg-red-600">
+                <Trash2 className="w-3.5 h-3.5 sm:w-3 sm:h-3" />
+              </button>
+            </div>
+          )}
+        </div>
+      ) : null}
 
       {/* Color palette bar */}
       {reference.colors?.length > 0 && (

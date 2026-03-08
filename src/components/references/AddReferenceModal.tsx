@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { X, Upload, Plus, Loader2, MapPin, Check } from "lucide-react";
+import { X, Upload, Plus, Loader2, MapPin, Check, Link2, Image as ImageIcon } from "lucide-react";
 import { Location } from "@/lib/types";
 import { extractColors } from "@/lib/extractColors";
 
@@ -23,7 +23,26 @@ interface Props {
   onClose: () => void;
 }
 
+type AddMode = "images" | "link";
+
+function detectPlatform(url: string): string | null {
+  try {
+    const host = new URL(url).hostname.toLowerCase();
+    if (host.includes("tiktok")) return "tiktok";
+    if (host.includes("instagram")) return "instagram";
+    if (host.includes("youtube") || host.includes("youtu.be")) return "youtube";
+    if (host.includes("vimeo")) return "vimeo";
+    if (host.includes("pinterest")) return "pinterest";
+    if (host.includes("behance")) return "behance";
+    if (host.includes("dribbble")) return "dribbble";
+    return null;
+  } catch {
+    return null;
+  }
+}
+
 export default function AddReferenceModal({ projectId, locations, boards, onCreated, onClose }: Props) {
+  const [mode, setMode] = useState<AddMode>("images");
   const [title, setTitle] = useState("");
   const [notes, setNotes] = useState("");
   const [board, setBoard] = useState("");
@@ -37,6 +56,11 @@ export default function AddReferenceModal({ projectId, locations, boards, onCrea
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState("");
   const [saving, setSaving] = useState(false);
+
+  // Link-specific state
+  const [linkUrl, setLinkUrl] = useState("");
+  const [linkThumbnail, setLinkThumbnail] = useState("");
+  const [uploadingThumb, setUploadingThumb] = useState(false);
 
   useEffect(() => {
     function handleClick(e: MouseEvent) {
@@ -94,27 +118,59 @@ export default function AddReferenceModal({ projectId, locations, boards, onCrea
     e.target.value = "";
   }
 
+  async function handleThumbUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadingThumb(true);
+    const fd = new FormData();
+    fd.append("file", file);
+    const res = await fetch("/api/upload", { method: "POST", body: fd });
+    if (res.ok) {
+      const { url } = await res.json();
+      setLinkThumbnail(url);
+    }
+    setUploadingThumb(false);
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (images.length === 0) return;
-    setSaving(true);
-
     const finalBoard = newBoard.trim() || board || null;
 
-    // Create a reference for each image
-    for (const img of images) {
+    if (mode === "images") {
+      if (images.length === 0) return;
+      setSaving(true);
+      for (const img of images) {
+        await fetch(`/api/projects/${projectId}/references`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            image_url: img.url,
+            title: images.length === 1 ? (title.trim() || null) : null,
+            notes: notes.trim() || null,
+            category: "moodboard",
+            board: finalBoard,
+            location_ids: locationIds,
+            tags,
+            colors: img.colors,
+          }),
+        });
+      }
+    } else {
+      if (!linkUrl.trim()) return;
+      setSaving(true);
       await fetch(`/api/projects/${projectId}/references`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          image_url: img.url,
-          title: images.length === 1 ? (title.trim() || null) : null,
+          image_url: linkThumbnail || "",
+          link_url: linkUrl.trim(),
+          title: title.trim() || null,
           notes: notes.trim() || null,
           category: "moodboard",
           board: finalBoard,
           location_ids: locationIds,
           tags,
-          colors: img.colors,
+          colors: [],
         }),
       });
     }
@@ -122,6 +178,8 @@ export default function AddReferenceModal({ projectId, locations, boards, onCrea
     onCreated();
     onClose();
   }
+
+  const canSubmit = mode === "images" ? images.length > 0 : !!linkUrl.trim();
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={onClose}>
@@ -131,73 +189,133 @@ export default function AddReferenceModal({ projectId, locations, boards, onCrea
           <button onClick={onClose} className="text-text-muted hover:text-text-primary"><X className="w-5 h-5" /></button>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Uploaded images preview */}
-          {images.length > 0 && (
-            <div>
-              <div className="grid grid-cols-3 gap-2">
-                {images.map((img, i) => (
-                  <div key={i} className="relative rounded-lg overflow-hidden group">
-                    <img src={img.url} alt="" className="w-full aspect-square object-cover" />
-                    <button
-                      type="button"
-                      onClick={() => removeImage(i)}
-                      className="absolute top-1 right-1 bg-black/60 rounded-full p-0.5 text-white opacity-0 group-hover:opacity-100 transition-opacity hover:bg-black/80"
-                    >
-                      <X className="w-3.5 h-3.5" />
-                    </button>
-                    {/* Color bar */}
-                    {img.colors.length > 0 && (
-                      <div className="absolute bottom-0 left-0 right-0 flex h-1.5">
-                        {img.colors.map((c) => (
-                          <div key={c} className="flex-1" style={{ backgroundColor: c }} />
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                ))}
+        {/* Mode toggle */}
+        <div className="flex gap-1 bg-bg-primary border border-border rounded-lg p-1 mb-5">
+          <button
+            type="button"
+            onClick={() => setMode("images")}
+            className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+              mode === "images" ? "bg-accent text-white" : "text-text-secondary hover:text-text-primary"
+            }`}
+          >
+            <ImageIcon className="w-4 h-4" />
+            Images
+          </button>
+          <button
+            type="button"
+            onClick={() => setMode("link")}
+            className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+              mode === "link" ? "bg-accent text-white" : "text-text-secondary hover:text-text-primary"
+            }`}
+          >
+            <Link2 className="w-4 h-4" />
+            Link
+          </button>
+        </div>
 
-                {/* Add more button */}
-                <label className="aspect-square border-2 border-dashed border-border rounded-lg flex flex-col items-center justify-center gap-1 text-text-muted hover:text-accent hover:border-accent transition-colors cursor-pointer">
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {/* === IMAGE MODE === */}
+          {mode === "images" && (
+            <>
+              {images.length > 0 && (
+                <div>
+                  <div className="grid grid-cols-3 gap-2">
+                    {images.map((img, i) => (
+                      <div key={i} className="relative rounded-lg overflow-hidden group">
+                        <img src={img.url} alt="" className="w-full aspect-square object-cover" />
+                        <button
+                          type="button"
+                          onClick={() => removeImage(i)}
+                          className="absolute top-1 right-1 bg-black/60 rounded-full p-0.5 text-white opacity-0 group-hover:opacity-100 transition-opacity hover:bg-black/80"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                        {img.colors.length > 0 && (
+                          <div className="absolute bottom-0 left-0 right-0 flex h-1.5">
+                            {img.colors.map((c) => (
+                              <div key={c} className="flex-1" style={{ backgroundColor: c }} />
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                    <label className="aspect-square border-2 border-dashed border-border rounded-lg flex flex-col items-center justify-center gap-1 text-text-muted hover:text-accent hover:border-accent transition-colors cursor-pointer">
+                      {uploading ? (
+                        <Loader2 className="w-5 h-5 animate-spin" />
+                      ) : (
+                        <>
+                          <Plus className="w-5 h-5" />
+                          <span className="text-[10px]">More</span>
+                        </>
+                      )}
+                      <input type="file" accept="image/*" multiple onChange={handleUpload} className="hidden" disabled={uploading} />
+                    </label>
+                  </div>
+                  {uploading && <p className="text-xs text-text-muted mt-1.5">{uploadProgress}</p>}
+                  <p className="text-xs text-text-muted mt-1.5">{images.length} image{images.length !== 1 ? "s" : ""} selected</p>
+                </div>
+              )}
+
+              {images.length === 0 && (
+                <label className="flex flex-col items-center justify-center gap-2 py-10 border-2 border-dashed border-border rounded-lg text-text-secondary hover:text-accent hover:border-accent transition-colors cursor-pointer">
                   {uploading ? (
-                    <Loader2 className="w-5 h-5 animate-spin" />
+                    <>
+                      <Loader2 className="w-8 h-8 animate-spin" />
+                      <span className="text-sm">{uploadProgress}</span>
+                    </>
                   ) : (
                     <>
-                      <Plus className="w-5 h-5" />
-                      <span className="text-[10px]">More</span>
+                      <Upload className="w-8 h-8" />
+                      <span className="text-sm">Drop images or click to upload</span>
+                      <span className="text-xs text-text-muted">Select multiple images at once</span>
                     </>
                   )}
                   <input type="file" accept="image/*" multiple onChange={handleUpload} className="hidden" disabled={uploading} />
                 </label>
+              )}
+            </>
+          )}
+
+          {/* === LINK MODE === */}
+          {mode === "link" && (
+            <>
+              <div>
+                <label className="block text-sm text-text-secondary mb-1">URL *</label>
+                <input
+                  value={linkUrl}
+                  onChange={(e) => setLinkUrl(e.target.value)}
+                  placeholder="https://www.instagram.com/p/... or any URL"
+                  className="w-full bg-bg-input border border-border rounded-lg px-4 py-2.5 text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent"
+                  autoFocus
+                />
+                {linkUrl && detectPlatform(linkUrl) && (
+                  <p className="text-xs text-accent mt-1 capitalize">{detectPlatform(linkUrl)} link detected</p>
+                )}
               </div>
-              {uploading && (
-                <p className="text-xs text-text-muted mt-1.5">{uploadProgress}</p>
-              )}
-              <p className="text-xs text-text-muted mt-1.5">{images.length} image{images.length !== 1 ? "s" : ""} selected</p>
-            </div>
+
+              {/* Optional thumbnail */}
+              <div>
+                <label className="block text-sm text-text-secondary mb-1">Thumbnail (optional)</label>
+                {linkThumbnail ? (
+                  <div className="relative w-32">
+                    <img src={linkThumbnail} alt="" className="w-full aspect-square object-cover rounded-lg" />
+                    <button type="button" onClick={() => setLinkThumbnail("")} className="absolute top-1 right-1 bg-black/60 rounded-full p-0.5 text-white hover:bg-black/80">
+                      <X className="w-3 h-3" />
+                    </button>
+                  </div>
+                ) : (
+                  <label className="inline-flex items-center gap-2 py-2.5 px-4 border-2 border-dashed border-border rounded-lg text-text-secondary hover:text-accent hover:border-accent transition-colors cursor-pointer text-sm">
+                    <Upload className="w-4 h-4" />
+                    {uploadingThumb ? "Uploading..." : "Upload thumbnail"}
+                    <input type="file" accept="image/*" onChange={handleThumbUpload} className="hidden" />
+                  </label>
+                )}
+              </div>
+            </>
           )}
 
-          {/* Initial upload area */}
-          {images.length === 0 && (
-            <label className="flex flex-col items-center justify-center gap-2 py-10 border-2 border-dashed border-border rounded-lg text-text-secondary hover:text-accent hover:border-accent transition-colors cursor-pointer">
-              {uploading ? (
-                <>
-                  <Loader2 className="w-8 h-8 animate-spin" />
-                  <span className="text-sm">{uploadProgress}</span>
-                </>
-              ) : (
-                <>
-                  <Upload className="w-8 h-8" />
-                  <span className="text-sm">Drop images or click to upload</span>
-                  <span className="text-xs text-text-muted">Select multiple images at once</span>
-                </>
-              )}
-              <input type="file" accept="image/*" multiple onChange={handleUpload} className="hidden" disabled={uploading} />
-            </label>
-          )}
-
-          {/* Title - only show for single image */}
-          {images.length <= 1 && (
+          {/* Shared fields */}
+          {(mode === "link" || images.length <= 1) && (
             <input
               value={title}
               onChange={(e) => setTitle(e.target.value)}
@@ -276,7 +394,7 @@ export default function AddReferenceModal({ projectId, locations, boards, onCrea
             </div>
           </div>
 
-          {/* Locations (multi-select) */}
+          {/* Locations */}
           <div ref={locationRef} className="relative">
             <span className="text-xs text-text-muted mb-1.5 block">Locations</span>
             <button
@@ -341,8 +459,8 @@ export default function AddReferenceModal({ projectId, locations, boards, onCrea
             <button type="button" onClick={onClose} className="flex-1 bg-bg-card hover:bg-bg-card-hover border border-border text-text-primary rounded-lg px-4 py-2.5 transition-colors">
               Cancel
             </button>
-            <button type="submit" disabled={images.length === 0 || saving || uploading} className="flex-1 bg-accent hover:bg-accent-hover text-white rounded-lg px-4 py-2.5 font-medium transition-colors disabled:opacity-50">
-              {saving ? "Adding..." : `Add ${images.length > 1 ? `${images.length} Images` : "to Moodboard"}`}
+            <button type="submit" disabled={!canSubmit || saving || uploading} className="flex-1 bg-accent hover:bg-accent-hover text-white rounded-lg px-4 py-2.5 font-medium transition-colors disabled:opacity-50">
+              {saving ? "Adding..." : mode === "images" && images.length > 1 ? `Add ${images.length} Images` : "Add to Moodboard"}
             </button>
           </div>
         </form>

@@ -62,6 +62,7 @@ export interface ShootReference {
   title: string | null;
   description: string | null;
   image_url: string;
+  link_url: string | null;
   category: string | null;
   board: string | null;
   tags: string[];

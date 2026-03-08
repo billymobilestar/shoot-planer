@@ -89,7 +89,8 @@ create table shoot_references (
   location_id uuid references locations(id) on delete set null,
   title text,
   description text,
-  image_url text not null,
+  image_url text not null default '',
+  link_url text,
   category text default 'moodboard', -- 'moodboard' only now
   board text, -- custom board/section name for grouping
   tags text[] default '{}', -- e.g. {'lighting', 'wardrobe', 'color palette'}

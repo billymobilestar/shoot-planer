@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
-import { Plus, Image as ImageIcon, MapPin, Camera, Layers, Tag, Palette, ArrowUpDown, X, Check } from "lucide-react";
+import { Plus, Image as ImageIcon, MapPin, Camera, Layers, Tag, Palette, ArrowUpDown, X, Check, Link2, ExternalLink } from "lucide-react";
 import { ShootReference, Location, LocationPhoto } from "@/lib/types";
 import ReferenceCard from "./ReferenceCard";
 import AddReferenceModal from "./AddReferenceModal";
@@ -134,7 +134,7 @@ export default function ReferencesView({ projectId, canEdit }: Props) {
 
   // Group location photos by location — include moodboard images assigned to locations
   const locationSections = useMemo(() => {
-    type LocationItem = { id: string; image_url: string; caption: string | null; type: "photo" | "reference"; created_at: string };
+    type LocationItem = { id: string; image_url: string; link_url?: string | null; caption: string | null; type: "photo" | "reference" | "link"; created_at: string };
 
     const itemsByLocation = new Map<string, LocationItem[]>();
 
@@ -150,19 +150,19 @@ export default function ReferencesView({ projectId, canEdit }: Props) {
       });
     }
 
-    // Add moodboard references that have location_ids
+    // Add moodboard references that have location_ids (images and links)
     for (const ref of references) {
       if (!ref.location_ids?.length) continue;
       for (const locId of ref.location_ids) {
         if (!itemsByLocation.has(locId)) itemsByLocation.set(locId, []);
-        // Avoid duplicates
         const existing = itemsByLocation.get(locId)!;
         if (!existing.some((item) => item.id === `ref-${ref.id}`)) {
           existing.push({
             id: `ref-${ref.id}`,
             image_url: ref.image_url,
+            link_url: ref.link_url,
             caption: ref.title || ref.notes || null,
-            type: "reference",
+            type: ref.link_url ? "link" : "reference",
             created_at: ref.created_at,
           });
         }
@@ -407,28 +407,61 @@ export default function ReferencesView({ projectId, canEdit }: Props) {
                   </div>
                   <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-5 gap-2">
                     {items.map((item) => (
-                      <div
-                        key={item.id}
-                        className="relative bg-bg-card border border-border rounded-xl overflow-hidden hover:border-border-light transition-colors cursor-pointer group/item"
-                        onClick={() => setLightbox({ src: item.image_url, alt: item.caption || "Location photo" })}
-                      >
-                        <img
-                          src={item.image_url}
-                          alt={item.caption || "Location photo"}
-                          className="w-full aspect-square object-cover"
-                        />
-                        {item.type === "reference" && (
-                          <div className="absolute top-1.5 left-1.5 bg-black/60 rounded-full px-1.5 py-0.5 flex items-center gap-1">
-                            <Palette className="w-2.5 h-2.5 text-white" />
-                            <span className="text-[9px] text-white font-medium">Moodboard</span>
-                          </div>
-                        )}
-                        {item.caption && (
-                          <div className="px-1.5 py-1">
-                            <p className="text-text-secondary text-[10px] truncate">{item.caption}</p>
-                          </div>
-                        )}
-                      </div>
+                      item.type === "link" ? (
+                        <a
+                          key={item.id}
+                          href={item.link_url!}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="relative bg-bg-card border border-border rounded-xl overflow-hidden hover:border-accent transition-colors group/item"
+                        >
+                          {item.image_url ? (
+                            <div className="relative">
+                              <img src={item.image_url} alt={item.caption || ""} className="w-full aspect-square object-cover" />
+                              <div className="absolute bottom-1.5 left-1.5 bg-black/60 rounded-full px-1.5 py-0.5 flex items-center gap-1">
+                                <Link2 className="w-2.5 h-2.5 text-white" />
+                                <span className="text-[9px] text-white font-medium">Link</span>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="w-full aspect-square bg-bg-primary flex flex-col items-center justify-center gap-1.5">
+                              <Link2 className="w-6 h-6 text-accent" />
+                              <span className="text-[9px] text-text-muted truncate px-2 w-full text-center">
+                                {(() => { try { return new URL(item.link_url!).hostname; } catch { return "Link"; } })()}
+                              </span>
+                            </div>
+                          )}
+                          {item.caption && (
+                            <div className="px-1.5 py-1 flex items-center gap-1">
+                              <ExternalLink className="w-2.5 h-2.5 text-text-muted shrink-0" />
+                              <p className="text-text-secondary text-[10px] truncate">{item.caption}</p>
+                            </div>
+                          )}
+                        </a>
+                      ) : (
+                        <div
+                          key={item.id}
+                          className="relative bg-bg-card border border-border rounded-xl overflow-hidden hover:border-border-light transition-colors cursor-pointer group/item"
+                          onClick={() => setLightbox({ src: item.image_url, alt: item.caption || "Location photo" })}
+                        >
+                          <img
+                            src={item.image_url}
+                            alt={item.caption || "Location photo"}
+                            className="w-full aspect-square object-cover"
+                          />
+                          {item.type === "reference" && (
+                            <div className="absolute top-1.5 left-1.5 bg-black/60 rounded-full px-1.5 py-0.5 flex items-center gap-1">
+                              <Palette className="w-2.5 h-2.5 text-white" />
+                              <span className="text-[9px] text-white font-medium">Moodboard</span>
+                            </div>
+                          )}
+                          {item.caption && (
+                            <div className="px-1.5 py-1">
+                              <p className="text-text-secondary text-[10px] truncate">{item.caption}</p>
+                            </div>
+                          )}
+                        </div>
+                      )
                     ))}
                   </div>
                 </div>
