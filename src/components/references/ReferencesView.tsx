@@ -174,6 +174,24 @@ export default function ReferencesView({ projectId, canEdit }: Props) {
       .map((loc) => ({ location: loc, items: itemsByLocation.get(loc.id)! }));
   }, [locationPhotos, locations, references]);
 
+  function detectPlatform(url: string): { label: string; style: string } {
+    try {
+      const host = new URL(url).hostname.toLowerCase();
+      if (host.includes("tiktok")) return { label: "TikTok", style: "bg-[#010101] text-white" };
+      if (host.includes("instagram")) return { label: "Instagram", style: "bg-linear-to-br from-purple-600 to-pink-500 text-white" };
+      if (host.includes("youtube") || host.includes("youtu.be")) return { label: "YouTube", style: "bg-red-600 text-white" };
+      if (host.includes("vimeo")) return { label: "Vimeo", style: "bg-[#1ab7ea] text-white" };
+      if (host.includes("pinterest")) return { label: "Pinterest", style: "bg-[#e60023] text-white" };
+      if (host.includes("behance")) return { label: "Behance", style: "bg-[#1769ff] text-white" };
+      if (host.includes("dribbble")) return { label: "Dribbble", style: "bg-[#ea4c89] text-white" };
+      if (host.includes("twitter") || host.includes("x.com")) return { label: "X", style: "bg-[#000] text-white" };
+      if (host.includes("spotify")) return { label: "Spotify", style: "bg-[#1db954] text-white" };
+      return { label: host.replace("www.", ""), style: "bg-bg-card-hover text-text-secondary" };
+    } catch {
+      return { label: "Link", style: "bg-bg-card-hover text-text-secondary" };
+    }
+  }
+
   if (loading) {
     return (
       <div className="grid grid-cols-3 sm:grid-cols-3 lg:grid-cols-4 gap-3">
@@ -408,36 +426,44 @@ export default function ReferencesView({ projectId, canEdit }: Props) {
                   <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-5 gap-2">
                     {items.map((item) => (
                       item.type === "link" ? (
-                        <a
-                          key={item.id}
-                          href={item.link_url!}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="relative bg-bg-card border border-border rounded-xl overflow-hidden hover:border-accent transition-colors group/item"
-                        >
-                          {item.image_url ? (
-                            <div className="relative">
-                              <img src={item.image_url} alt={item.caption || ""} className="w-full aspect-square object-cover" />
-                              <div className="absolute bottom-1.5 left-1.5 bg-black/60 rounded-full px-1.5 py-0.5 flex items-center gap-1">
-                                <Link2 className="w-2.5 h-2.5 text-white" />
-                                <span className="text-[9px] text-white font-medium">Link</span>
-                              </div>
-                            </div>
-                          ) : (
-                            <div className="w-full aspect-square bg-bg-primary flex flex-col items-center justify-center gap-1.5">
-                              <Link2 className="w-6 h-6 text-accent" />
-                              <span className="text-[9px] text-text-muted truncate px-2 w-full text-center">
-                                {(() => { try { return new URL(item.link_url!).hostname; } catch { return "Link"; } })()}
-                              </span>
-                            </div>
-                          )}
-                          {item.caption && (
-                            <div className="px-1.5 py-1 flex items-center gap-1">
-                              <ExternalLink className="w-2.5 h-2.5 text-text-muted shrink-0" />
-                              <p className="text-text-secondary text-[10px] truncate">{item.caption}</p>
-                            </div>
-                          )}
-                        </a>
+                        (() => {
+                          const plat = detectPlatform(item.link_url!);
+                          return (
+                            <a
+                              key={item.id}
+                              href={item.link_url!}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="relative bg-bg-card border border-border rounded-xl overflow-hidden hover:border-accent transition-colors group/item"
+                            >
+                              {item.image_url ? (
+                                <div className="relative">
+                                  <img src={item.image_url} alt={item.caption || ""} className="w-full aspect-square object-cover" />
+                                  <div className="absolute bottom-1.5 left-1.5">
+                                    <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full shadow-sm ${plat.style}`}>
+                                      {plat.label}
+                                    </span>
+                                  </div>
+                                </div>
+                              ) : (
+                                <div className="w-full aspect-square bg-bg-primary flex flex-col items-center justify-center gap-2">
+                                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${plat.style}`}>
+                                    <span className="text-base font-bold">{plat.label.charAt(0)}</span>
+                                  </div>
+                                  <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${plat.style}`}>
+                                    {plat.label}
+                                  </span>
+                                </div>
+                              )}
+                              {item.caption && (
+                                <div className="px-1.5 py-1 flex items-center gap-1">
+                                  <ExternalLink className="w-2.5 h-2.5 text-text-muted shrink-0" />
+                                  <p className="text-text-secondary text-[10px] truncate">{item.caption}</p>
+                                </div>
+                              )}
+                            </a>
+                          );
+                        })()
                       ) : (
                         <div
                           key={item.id}

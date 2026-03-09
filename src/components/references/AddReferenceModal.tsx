@@ -158,7 +158,7 @@ export default function AddReferenceModal({ projectId, locations, boards, onCrea
     } else {
       if (!linkUrl.trim()) return;
       setSaving(true);
-      await fetch(`/api/projects/${projectId}/references`, {
+      const res = await fetch(`/api/projects/${projectId}/references`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -173,6 +173,13 @@ export default function AddReferenceModal({ projectId, locations, boards, onCrea
           colors: [],
         }),
       });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        console.error("Failed to add link:", err);
+        alert(`Failed to add link: ${err.error || "Unknown error"}`);
+        setSaving(false);
+        return;
+      }
     }
 
     onCreated();

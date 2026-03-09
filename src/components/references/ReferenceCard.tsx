@@ -105,8 +105,24 @@ export default function ReferenceCard({ reference, locations, boards, canEdit, p
   const hasImage = !!reference.image_url;
 
   let linkHostname = "";
+  let linkPlatform = "";
+  let platformLabel = "";
+  let platformStyle = "bg-bg-card-hover text-text-secondary";
   if (isLink) {
-    try { linkHostname = new URL(reference.link_url!).hostname; } catch {}
+    try {
+      const host = new URL(reference.link_url!).hostname.toLowerCase();
+      linkHostname = host;
+      if (host.includes("tiktok")) { linkPlatform = "tiktok"; platformLabel = "TikTok"; platformStyle = "bg-[#010101] text-white"; }
+      else if (host.includes("instagram")) { linkPlatform = "instagram"; platformLabel = "Instagram"; platformStyle = "bg-linear-to-br from-purple-600 to-pink-500 text-white"; }
+      else if (host.includes("youtube") || host.includes("youtu.be")) { linkPlatform = "youtube"; platformLabel = "YouTube"; platformStyle = "bg-red-600 text-white"; }
+      else if (host.includes("vimeo")) { linkPlatform = "vimeo"; platformLabel = "Vimeo"; platformStyle = "bg-[#1ab7ea] text-white"; }
+      else if (host.includes("pinterest")) { linkPlatform = "pinterest"; platformLabel = "Pinterest"; platformStyle = "bg-[#e60023] text-white"; }
+      else if (host.includes("behance")) { linkPlatform = "behance"; platformLabel = "Behance"; platformStyle = "bg-[#1769ff] text-white"; }
+      else if (host.includes("dribbble")) { linkPlatform = "dribbble"; platformLabel = "Dribbble"; platformStyle = "bg-[#ea4c89] text-white"; }
+      else if (host.includes("twitter") || host.includes("x.com")) { linkPlatform = "x"; platformLabel = "X"; platformStyle = "bg-[#000] text-white"; }
+      else if (host.includes("spotify")) { linkPlatform = "spotify"; platformLabel = "Spotify"; platformStyle = "bg-[#1db954] text-white"; }
+      else { linkPlatform = "other"; platformLabel = host.replace("www.", ""); platformStyle = "bg-bg-card-hover text-text-secondary"; }
+    } catch {}
   }
 
   return (
@@ -121,9 +137,13 @@ export default function ReferenceCard({ reference, locations, boards, canEdit, p
             onClick={() => isLink ? window.open(reference.link_url!, "_blank") : onImageClick(reference.image_url, reference.title || "Reference")}
           />
           {isLink && (
-            <div className="absolute bottom-2 left-2 flex items-center gap-1 bg-black/60 backdrop-blur-sm rounded-full px-2 py-1">
-              <Link2 className="w-3 h-3 text-white" />
-              <span className="text-[10px] text-white/80 truncate max-w-24">{linkHostname}</span>
+            <div className="absolute bottom-3 left-3 flex items-center gap-2">
+              <span className={`text-sm font-bold px-3.5 py-1.5 rounded-full shadow-md ring-1 ring-white/20 ${platformStyle}`}>
+                <span className="flex items-center gap-1.5">
+                  <ExternalLink className="w-3.5 h-3.5" />
+                  {platformLabel}
+                </span>
+              </span>
             </div>
           )}
           {canEdit && !editing && (
@@ -143,15 +163,17 @@ export default function ReferenceCard({ reference, locations, boards, canEdit, p
             href={reference.link_url!}
             target="_blank"
             rel="noopener noreferrer"
-            className="block p-6 bg-bg-primary"
+            className="block p-6 bg-bg-primary hover:bg-bg-card-hover transition-colors"
           >
-            <div className="flex flex-col items-center gap-2 text-center">
-              <div className="w-12 h-12 rounded-xl bg-accent/10 flex items-center justify-center">
-                <Link2 className="w-6 h-6 text-accent" />
+            <div className="flex flex-col items-center gap-3 text-center py-2">
+              <div className={`w-16 h-16 rounded-2xl flex items-center justify-center shadow-lg ${platformStyle}`}>
+                <span className="text-2xl font-bold">{platformLabel.charAt(0).toUpperCase()}</span>
               </div>
-              <span className="text-xs text-text-muted truncate w-full">{linkHostname}</span>
-              <div className="flex items-center gap-1 text-[10px] text-accent">
-                <ExternalLink className="w-3 h-3" />
+              <span className={`text-sm font-bold px-4 py-1.5 rounded-full shadow-md ${platformStyle}`}>
+                {platformLabel}
+              </span>
+              <div className="flex items-center gap-1.5 text-xs text-accent font-medium mt-1">
+                <ExternalLink className="w-3.5 h-3.5" />
                 Open link
               </div>
             </div>
