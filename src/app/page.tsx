@@ -2,6 +2,79 @@ import { redirect } from "next/navigation";
 import { auth } from "@clerk/nextjs/server";
 import Link from "next/link";
 import { MapPin, Camera, ListChecks, Users } from "lucide-react";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "ShootPlaner — Film Shoot Planning App for Filmmakers",
+  description:
+    "Plan your film shoots collaboratively. Build itineraries, moodboards, and shot lists. Share with your crew via invite links. Free to start.",
+  alternates: { canonical: "https://shootplaner.com" },
+  openGraph: {
+    title: "ShootPlaner — Plan Your Film Shoots, Beautifully",
+    description:
+      "The all-in-one shoot planner for filmmakers. Organize locations, build moodboards, manage shot lists, and collaborate with your crew.",
+    url: "https://shootplaner.com",
+    type: "website",
+  },
+};
+
+const jsonLd = {
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "WebApplication",
+      "@id": "https://shootplaner.com/#app",
+      name: "ShootPlaner",
+      url: "https://shootplaner.com",
+      description:
+        "Collaborative film shoot planning app for filmmakers. Build itineraries, moodboards, shot lists and share with your crew.",
+      applicationCategory: "ProductivityApplication",
+      operatingSystem: "Web",
+      browserRequirements: "Requires JavaScript",
+      offers: {
+        "@type": "Offer",
+        price: "0",
+        priceCurrency: "USD",
+        availability: "https://schema.org/InStock",
+        description: "Free plan available",
+      },
+      featureList: [
+        "Shoot itinerary planning",
+        "Location management with Google Maps integration",
+        "Moodboard and reference images",
+        "Shot list management",
+        "Team collaboration and sharing",
+        "Drive time calculation",
+        "Link references from Instagram, TikTok, Pinterest",
+      ],
+    },
+    {
+      "@type": "Organization",
+      "@id": "https://shootplaner.com/#org",
+      name: "ShootPlaner",
+      url: "https://shootplaner.com",
+      logo: {
+        "@type": "ImageObject",
+        url: "https://shootplaner.com/icon-512.png",
+      },
+    },
+    {
+      "@type": "WebSite",
+      "@id": "https://shootplaner.com/#website",
+      url: "https://shootplaner.com",
+      name: "ShootPlaner",
+      publisher: { "@id": "https://shootplaner.com/#org" },
+      potentialAction: {
+        "@type": "SearchAction",
+        target: {
+          "@type": "EntryPoint",
+          urlTemplate: "https://shootplaner.com/dashboard?q={search_term_string}",
+        },
+        "query-input": "required name=search_term_string",
+      },
+    },
+  ],
+};
 
 const features = [
   {
@@ -35,6 +108,11 @@ export default async function LandingPage() {
   if (userId) redirect("/dashboard");
 
   return (
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
     <div className="min-h-screen bg-bg-primary">
       <nav className="border-b border-border px-6 py-4 flex items-center justify-between">
         <span className="text-xl font-bold text-accent">ShootPlaner</span>
@@ -55,7 +133,7 @@ export default async function LandingPage() {
       </nav>
 
       <section className="relative px-6 py-24 text-center">
-        <div className="absolute inset-0 bg-gradient-to-b from-accent/5 to-transparent pointer-events-none" />
+        <div className="absolute inset-0 bg-linear-to-b from-accent/5 to-transparent pointer-events-none" />
         <div className="relative max-w-3xl mx-auto">
           <h1 className="text-5xl md:text-6xl font-bold text-text-primary leading-tight">
             Plan Your Shoots,{" "}
@@ -105,5 +183,6 @@ export default async function LandingPage() {
         ShootPlaner &mdash; Built for filmmakers.
       </footer>
     </div>
+    </>
   );
 }

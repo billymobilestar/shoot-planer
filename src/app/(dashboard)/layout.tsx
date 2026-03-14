@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { UserButton } from "@clerk/nextjs";
+import NotificationBell from "@/components/notifications/NotificationBell";
 
 export default function DashboardLayout({
   children,
@@ -14,13 +15,16 @@ export default function DashboardLayout({
         <Link href="/dashboard" className="text-xl font-bold text-accent">
           ShootPlaner
         </Link>
-        <UserButton
-          appearance={{
-            elements: {
-              avatarBox: "w-9 h-9",
-            },
-          }}
-        />
+        <div className="flex items-center gap-2">
+          <NotificationBell />
+          <UserButton
+            appearance={{
+              elements: {
+                avatarBox: "w-9 h-9",
+              },
+            }}
+          />
+        </div>
       </nav>
       <main>{children}</main>
     </div>

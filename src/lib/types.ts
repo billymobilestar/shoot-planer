@@ -139,6 +139,29 @@ export interface ReferenceComment {
   created_at: string;
 }
 
+export type NotificationType =
+  | "reference_reaction"
+  | "reference_comment"
+  | "location_comment"
+  | "location_added";
+
+export interface Notification {
+  id: string;
+  project_id: string;
+  project_name: string | null;
+  recipient_user_id: string;
+  actor_user_id: string;
+  actor_name: string | null;
+  type: NotificationType;
+  title: string;
+  body: string | null;
+  resource_id: string;
+  deep_link: string;
+  read: boolean;
+  email_sent: boolean;
+  created_at: string;
+}
+
 export interface ShootDayWithLocations extends ShootDay {
   locations: Location[];
 }

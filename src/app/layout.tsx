@@ -8,9 +8,96 @@ const inter = Inter({
   subsets: ["latin"],
 });
 
+const APP_URL = "https://shootplaner.com";
+const APP_NAME = "ShootPlaner";
+const APP_DESCRIPTION =
+  "The collaborative shoot planner for filmmakers. Organize locations day-by-day, build moodboards, manage shot lists, and share with your crew — all in one place.";
+
 export const metadata: Metadata = {
-  title: "ShootPlaner",
-  description: "Plan your film shoots collaboratively",
+  metadataBase: new URL(APP_URL),
+  title: {
+    default: `${APP_NAME} — Film Shoot Planning App for Filmmakers`,
+    template: `%s | ${APP_NAME}`,
+  },
+  description: APP_DESCRIPTION,
+  keywords: [
+    "shoot planner",
+    "film shoot planning",
+    "film production app",
+    "shot list app",
+    "moodboard for filmmakers",
+    "location scouting app",
+    "filmmaking tools",
+    "video production planner",
+    "crew collaboration",
+    "director tools",
+    "cinematography planner",
+    "pre-production software",
+    "film itinerary",
+    "shooting schedule",
+    "film crew app",
+  ],
+  authors: [{ name: APP_NAME, url: APP_URL }],
+  creator: APP_NAME,
+  publisher: APP_NAME,
+  category: "productivity",
+  applicationName: APP_NAME,
+  referrer: "origin-when-cross-origin",
+  formatDetection: { email: false, address: false, telephone: false },
+  robots: {
+    index: true,
+    follow: true,
+    nocache: false,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-video-preview": -1,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+    },
+  },
+  openGraph: {
+    type: "website",
+    locale: "en_US",
+    url: APP_URL,
+    siteName: APP_NAME,
+    title: `${APP_NAME} — Film Shoot Planning App`,
+    description: APP_DESCRIPTION,
+    images: [
+      {
+        url: "/og-image.png",
+        width: 1200,
+        height: 630,
+        alt: "ShootPlaner — Plan Your Film Shoots Beautifully",
+        type: "image/png",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    site: "@shootplaner",
+    creator: "@shootplaner",
+    title: `${APP_NAME} — Film Shoot Planning App`,
+    description: APP_DESCRIPTION,
+    images: [{ url: "/og-image.png", alt: "ShootPlaner" }],
+  },
+  alternates: {
+    canonical: APP_URL,
+  },
+  icons: {
+    icon: [
+      { url: "/favicon.ico" },
+      { url: "/icon-192.png", sizes: "192x192", type: "image/png" },
+      { url: "/icon-512.png", sizes: "512x512", type: "image/png" },
+    ],
+    apple: [{ url: "/apple-touch-icon.png", sizes: "180x180" }],
+    shortcut: "/favicon.ico",
+  },
+  manifest: "/manifest.json",
+  other: {
+    "msapplication-TileColor": "#c87040",
+    "theme-color": "#1a1a1a",
+  },
 };
 
 export default function RootLayout({

@@ -274,6 +274,39 @@ alter table subscriptions enable row level security;
 create policy "allow_all_subscriptions" on subscriptions for all using (true) with check (true);
 
 -- ============================================
+-- NOTIFICATIONS
+-- ============================================
+create type notification_type as enum (
+  'reference_reaction',
+  'reference_comment',
+  'location_comment',
+  'location_added'
+);
+
+create table notifications (
+  id uuid primary key default uuid_generate_v4(),
+  project_id uuid references projects(id) on delete cascade not null,
+  project_name text,
+  recipient_user_id text not null,
+  actor_user_id text not null,
+  actor_name text,
+  type notification_type not null,
+  title text not null,
+  body text,
+  resource_id text not null,
+  deep_link text not null,
+  read boolean default false,
+  email_sent boolean default false,
+  created_at timestamptz default now()
+);
+
+create index idx_notifications_recipient on notifications(recipient_user_id, read, created_at desc);
+create index idx_notifications_project on notifications(project_id);
+
+alter table notifications enable row level security;
+create policy "allow_all_notifications" on notifications for all using (true) with check (true);
+
+-- ============================================
 -- STORAGE BUCKET for images
 -- ============================================
 -- Run these in Supabase Dashboard > Storage:

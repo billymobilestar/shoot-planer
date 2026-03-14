@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, use, useRef } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { MapPin, Camera, ListChecks, Users, ArrowLeft, Pencil, Check, X, Upload } from "lucide-react";
 import { Project, ShootDayWithLocations } from "@/lib/types";
 import ItineraryView from "@/components/itinerary/ItineraryView";
@@ -25,9 +25,13 @@ type TabId = (typeof tabs)[number]["id"];
 
 export default function ProjectPage({ params }: { params: Promise<{ projectId: string }> }) {
   const { projectId } = use(params);
+  const searchParams = useSearchParams();
   const [project, setProject] = useState<ProjectData | null>(null);
   const [activeTab, setActiveTab] = useState<TabId>(() => {
     if (typeof window !== "undefined") {
+      // Check query param first (from notification deep links), then hash
+      const tabParam = new URLSearchParams(window.location.search).get("tab");
+      if (tabParam && ["itinerary", "references", "shots", "team"].includes(tabParam)) return tabParam as TabId;
       const hash = window.location.hash.slice(1);
       if (["itinerary", "references", "shots", "team"].includes(hash)) return hash as TabId;
     }
@@ -55,6 +59,28 @@ export default function ProjectPage({ params }: { params: Promise<{ projectId: s
   useEffect(() => {
     fetchProject();
   }, [projectId]);
+
+  // Handle deep link scroll from notification clicks
+  useEffect(() => {
+    const refId = searchParams.get("ref");
+    const locId = searchParams.get("loc");
+    const targetId = refId || locId;
+    if (!targetId || loading) return;
+
+    // Small delay to let the tab content render
+    const timeout = setTimeout(() => {
+      const el = document.querySelector(`[data-id="${targetId}"]`);
+      if (el) {
+        el.scrollIntoView({ behavior: "smooth", block: "center" });
+        el.classList.add("ring-2", "ring-accent", "ring-offset-2", "ring-offset-bg-primary");
+        setTimeout(() => {
+          el.classList.remove("ring-2", "ring-accent", "ring-offset-2", "ring-offset-bg-primary");
+        }, 3000);
+      }
+    }, 500);
+
+    return () => clearTimeout(timeout);
+  }, [searchParams, loading]);
 
   async function saveName() {
     if (!nameValue.trim() || !project) return;

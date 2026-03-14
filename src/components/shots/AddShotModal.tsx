@@ -155,17 +155,19 @@ export default function AddShotModal({ projectId, locations, references, onCreat
                       <span className="text-[11px] text-text-muted uppercase tracking-wider">Or choose from moodboard</span>
                       <div className="flex-1 border-t border-border" />
                     </div>
-                    <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 max-h-44 overflow-y-auto p-0.5">
+                    <div className="grid grid-cols-3 sm:grid-cols-4 gap-2.5 max-h-44 overflow-y-auto p-0.5">
                       {existingImages.map((ref) => (
                         <button
                           key={ref.id}
                           type="button"
                           onClick={() => selectExisting(ref.image_url)}
-                          className="relative aspect-square rounded-lg overflow-hidden border-2 border-border hover:border-accent active:border-accent transition-colors group/img"
+                          className="relative w-full rounded-lg overflow-hidden border-2 border-border hover:border-accent active:border-accent transition-colors group/img"
                         >
-                          <img src={ref.image_url} alt={ref.title || ""} className="w-full h-full object-cover" />
-                          <div className="absolute inset-0 bg-accent/0 group-hover/img:bg-accent/20 active:bg-accent/20 transition-colors flex items-center justify-center">
-                            <Check className="w-5 h-5 text-white opacity-0 group-hover/img:opacity-100 drop-shadow-lg transition-opacity" />
+                          <div className="w-full pt-[100%] relative">
+                            <img src={ref.image_url} alt={ref.title || ""} className="absolute inset-0 w-full h-full object-cover" />
+                            <div className="absolute inset-0 bg-accent/0 group-hover/img:bg-accent/20 active:bg-accent/20 transition-colors flex items-center justify-center">
+                              <Check className="w-5 h-5 text-white opacity-0 group-hover/img:opacity-100 drop-shadow-lg transition-opacity" />
+                            </div>
                           </div>
                         </button>
                       ))}

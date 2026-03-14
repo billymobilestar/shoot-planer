@@ -2,6 +2,7 @@ import { auth, currentUser } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabase";
 import { getDisplayName } from "@/lib/utils";
+import { createNotifications } from "@/lib/notifications";
 
 export async function GET(
   request: Request,
@@ -31,7 +32,7 @@ export async function POST(
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const user = await currentUser();
-  const { locationId } = await params;
+  const { projectId, locationId } = await params;
   const body = await request.json();
   const supabase = getSupabaseAdmin();
 
@@ -47,5 +48,25 @@ export async function POST(
     .single();
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+  // Get location name for notification
+  const { data: location } = await supabase
+    .from("locations")
+    .select("name")
+    .eq("id", locationId)
+    .single();
+
+  const actorName = getDisplayName(user);
+  createNotifications({
+    projectId,
+    actorUserId: userId,
+    actorName,
+    type: "location_comment",
+    title: `${actorName} commented on ${location?.name || "a location"}`,
+    body: body.content?.slice(0, 100) || null,
+    resourceId: locationId,
+    deepLink: `/project/${projectId}?tab=itinerary&loc=${locationId}`,
+  });
+
   return NextResponse.json(data, { status: 201 });
 }

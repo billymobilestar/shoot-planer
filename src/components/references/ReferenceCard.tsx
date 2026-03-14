@@ -126,7 +126,7 @@ export default function ReferenceCard({ reference, locations, boards, canEdit, p
   }
 
   return (
-    <div className="bg-bg-card border border-border rounded-xl overflow-hidden break-inside-avoid hover:border-border-light transition-colors group">
+    <div data-id={reference.id} className="bg-bg-card border border-border rounded-xl overflow-hidden break-inside-avoid hover:border-border-light transition-all group">
       {/* Image or Link hero */}
       {hasImage ? (
         <div className="relative">

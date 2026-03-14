@@ -2,6 +2,7 @@ import { auth, currentUser } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabase";
 import { getDisplayName } from "@/lib/utils";
+import { createNotifications } from "@/lib/notifications";
 
 export async function GET(
   request: Request,
@@ -30,7 +31,7 @@ export async function POST(
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const user = await currentUser();
-  const { refId } = await params;
+  const { projectId, refId } = await params;
   const body = await request.json();
   const supabase = getSupabaseAdmin();
 
@@ -58,5 +59,18 @@ export async function POST(
     });
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+  const actorName = getDisplayName(user);
+  createNotifications({
+    projectId,
+    actorUserId: userId,
+    actorName,
+    type: "reference_reaction",
+    title: `${actorName} reacted to a reference`,
+    body: null,
+    resourceId: refId,
+    deepLink: `/project/${projectId}?tab=references&ref=${refId}`,
+  });
+
   return NextResponse.json({ action: "added" }, { status: 201 });
 }

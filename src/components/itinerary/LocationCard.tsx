@@ -96,7 +96,7 @@ export default function LocationCard({ location, canEdit, projectId, onUpdate, i
     : null;
 
   return (
-    <div ref={setNodeRef} style={style} className="bg-bg-card-hover border border-border rounded-xl overflow-hidden">
+    <div ref={setNodeRef} style={style} data-id={location.id} className="bg-bg-card-hover border border-border rounded-xl overflow-hidden transition-all">
       {/* Hero image - always visible when available */}
       {location.photo_url && (
         <div className="relative">
