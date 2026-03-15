@@ -109,7 +109,7 @@ export default async function DemoPage() {
 
   return (
     <DemoView
-      project={project}
+      project={{ ...project, name: "Golden Hour — Feature Film Demo" }}
       daysWithLocations={daysWithLocations}
       locations={sanitizedLocations}
       references={references || []}
