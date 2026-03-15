@@ -542,11 +542,8 @@ export default async function LandingPage() {
               ))}
             </ul>
           </div>
-          <div className="rounded-2xl overflow-hidden border border-border shadow-2xl bg-bg-card aspect-video bg-linear-to-br from-accent/10 via-bg-card to-bg-primary flex items-center justify-center">
-            <div className="text-center px-8">
-              <Users className="w-12 h-12 text-accent/40 mx-auto mb-3" />
-              <p className="text-text-muted text-sm">Screenshot coming soon</p>
-            </div>
+          <div className="rounded-2xl overflow-hidden border border-border shadow-2xl">
+            <img src="/screenshots/invite.png" alt="Invite crew members to your project" className="w-full h-auto" />
           </div>
         </div>
       </section>

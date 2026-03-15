@@ -16,8 +16,27 @@ export default async function AdminPage() {
   if (!userId) redirect("/sign-in");
 
   const user = await currentUser();
-  const email = user?.emailAddresses?.[0]?.emailAddress;
-  if (email !== SUPERADMIN_EMAIL) redirect("/dashboard");
+  const emails = user?.emailAddresses?.map((e) => e.emailAddress) ?? [];
+  const primaryEmail = user?.primaryEmailAddress?.emailAddress ?? emails[0];
+  // Debug: temporarily allow any logged-in user to see their info
+  const SUPERADMIN_USER_ID = process.env.SUPERADMIN_CLERK_ID ?? "";
+  const isSuperadmin =
+    emails.includes(SUPERADMIN_EMAIL) ||
+    (SUPERADMIN_USER_ID && userId === SUPERADMIN_USER_ID);
+  if (!isSuperadmin) {
+    // Temporarily: show a plain debug page instead of redirecting so you can grab your userId
+    return (
+      <div className="min-h-screen bg-bg-primary flex items-center justify-center">
+        <div className="bg-bg-card border border-border rounded-xl p-8 max-w-md w-full space-y-3">
+          <p className="text-sm font-mono text-text-primary">Your Clerk user ID:</p>
+          <p className="text-accent font-mono text-sm break-all bg-bg-primary rounded p-3 border border-border">{userId}</p>
+          <p className="text-sm font-mono text-text-primary">Your emails:</p>
+          <p className="text-text-secondary font-mono text-sm break-all bg-bg-primary rounded p-3 border border-border">{emails.join(", ")}</p>
+          <p className="text-xs text-text-muted">Copy your user ID and add it as <code>SUPERADMIN_CLERK_ID</code> in .env.local, or verify the email matches.</p>
+        </div>
+      </div>
+    );
+  }
 
   // Fetch all stats in parallel
   const [
@@ -72,7 +91,7 @@ export default async function AdminPage() {
             Superadmin
           </span>
         </div>
-        <span className="text-xs text-text-muted">{email}</span>
+        <span className="text-xs text-text-muted">{primaryEmail}</span>
       </nav>
 
       <div className="max-w-6xl mx-auto px-6 py-8">
