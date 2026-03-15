@@ -211,23 +211,23 @@ export default async function LandingPage() {
           </p>
         </div>
 
-        {/* Feature 1: Itinerary */}
+        {/* 1: Itinerary — day-by-day planning */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
           <div>
             <div className="inline-flex items-center gap-2 bg-accent/10 text-accent px-3 py-1 rounded-full text-sm font-medium mb-5">
               <MapPin className="w-3.5 h-3.5" />
               Itinerary Planner
             </div>
-            <h3 className="text-2xl font-bold text-text-primary mb-4">Plan every location, every day</h3>
+            <h3 className="text-2xl font-bold text-text-primary mb-4">Plan every location, day by day</h3>
             <p className="text-text-secondary leading-relaxed mb-6">
-              Build your shoot schedule day by day. Add locations, auto-calculate drive times between each stop, and share a Google Maps route with your entire crew in one tap.
+              Structure your entire shoot as a day-by-day location itinerary. Each day gets its own block with all locations listed in order — so your crew always knows exactly where to be and when.
             </p>
             <ul className="space-y-2.5">
               {[
-                "Drag and drop to reorder locations",
-                "Drive time calculated automatically",
-                "One-click Google Maps route for the full day",
-                "Team comments on every location",
+                "Add as many shoot days as you need",
+                "Each day shows all locations in sequence",
+                "Collapse or expand days to stay focused",
+                "Add notes, photos, and comments to every location",
               ].map((item) => (
                 <li key={item} className="flex items-center gap-2.5 text-text-secondary text-sm">
                   <Check className="w-4 h-4 text-accent shrink-0" />
@@ -236,57 +236,107 @@ export default async function LandingPage() {
               ))}
             </ul>
           </div>
-          <div className="space-y-3">
-            <div className="rounded-2xl overflow-hidden border border-border shadow-2xl bg-bg-card">
-              <img
-                src="/screenshots/distance1.png"
-                alt="Itinerary planner with locations and drive times"
-                className="w-full object-cover object-top"
-              />
-            </div>
-            <div className="rounded-xl overflow-hidden border border-border shadow-lg bg-bg-card">
-              <img
-                src="/screenshots/distance2.png"
-                alt="Close-up of auto-calculated drive time between locations"
-                className="w-full object-cover object-top"
-              />
-            </div>
+          <div className="rounded-2xl overflow-hidden border border-border shadow-2xl bg-bg-card">
+            <img
+              src="/screenshots/distance1.png"
+              alt="Itinerary view showing shoot days and locations in sequence"
+              className="w-full object-cover object-top"
+            />
           </div>
         </div>
 
-        {/* Feature 2: Moodboard — image left */}
+        {/* 2: Drive time auto-calculation */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-          <div className="order-last lg:order-first space-y-3">
-            <div className="rounded-2xl overflow-hidden border border-border shadow-2xl bg-bg-card">
-              <img
-                src="/screenshots/moodboardlocations.png"
-                alt="Moodboard references organised by assigned locations"
-                className="w-full object-cover object-top"
-              />
-            </div>
-            <div className="rounded-xl overflow-hidden border border-border shadow-lg bg-bg-card">
-              <img
-                src="/screenshots/assignlocations.png"
-                alt="Assigning a location to a reference image"
-                className="w-full object-cover object-top"
-              />
-            </div>
+          <div className="order-last lg:order-first rounded-2xl overflow-hidden border border-border shadow-2xl bg-bg-card">
+            <img
+              src="/screenshots/distance2.png"
+              alt="Auto-calculated drive time and distance between two locations"
+              className="w-full object-cover object-top"
+            />
           </div>
+          <div>
+            <div className="inline-flex items-center gap-2 bg-accent/10 text-accent px-3 py-1 rounded-full text-sm font-medium mb-5">
+              <Route className="w-3.5 h-3.5" />
+              Drive Time Calculator
+            </div>
+            <h3 className="text-2xl font-bold text-text-primary mb-4">Drive times calculated automatically</h3>
+            <p className="text-text-secondary leading-relaxed mb-6">
+              ShootPlaner calculates the real-world drive time and distance between every consecutive location on your itinerary. No more guessing how long it takes to move from one spot to the next.
+            </p>
+            <ul className="space-y-2.5">
+              {[
+                "Drive time shown between every location",
+                "Distance in miles displayed alongside",
+                "Updates automatically when you reorder locations",
+                "One-tap to open the full route in Google Maps",
+              ].map((item) => (
+                <li key={item} className="flex items-center gap-2.5 text-text-secondary text-sm">
+                  <Check className="w-4 h-4 text-accent shrink-0" />
+                  {item}
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+
+        {/* 3: Moodboard by location */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
           <div>
             <div className="inline-flex items-center gap-2 bg-accent/10 text-accent px-3 py-1 rounded-full text-sm font-medium mb-5">
               <Camera className="w-3.5 h-3.5" />
               Moodboard
             </div>
-            <h3 className="text-2xl font-bold text-text-primary mb-4">Visual direction, always in reach</h3>
+            <h3 className="text-2xl font-bold text-text-primary mb-4">References organised by location</h3>
             <p className="text-text-secondary leading-relaxed mb-6">
-              Upload reference images or paste links from Instagram, Pinterest, TikTok, and more. Organise by board, tag locations, and let your crew react and comment in real time.
+              Your moodboard isn&apos;t just a pile of images — every reference can be assigned to a specific location, so your crew knows exactly which shot or place each image belongs to.
             </p>
             <ul className="space-y-2.5">
               {[
-                "Paste links from any platform — auto-preview generated",
-                "Organise into boards per scene or look",
-                "Emoji reactions and comments from your crew",
-                "Assign references directly to locations",
+                "Filter the moodboard by any location",
+                "See only the references relevant to where you're shooting",
+                "Keeps visual direction tied to the physical plan",
+                "Works with photos, links, and platform embeds",
+              ].map((item) => (
+                <li key={item} className="flex items-center gap-2.5 text-text-secondary text-sm">
+                  <Check className="w-4 h-4 text-accent shrink-0" />
+                  {item}
+                </li>
+              ))}
+            </ul>
+          </div>
+          <div className="rounded-2xl overflow-hidden border border-border shadow-2xl bg-bg-card">
+            <img
+              src="/screenshots/moodboardlocations.png"
+              alt="Moodboard showing references filtered and grouped by location"
+              className="w-full object-cover object-top"
+            />
+          </div>
+        </div>
+
+        {/* 4: Assign to location */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+          <div className="order-last lg:order-first rounded-2xl overflow-hidden border border-border shadow-2xl bg-bg-card">
+            <img
+              src="/screenshots/assignlocations.png"
+              alt="Assigning a reference image to a specific shoot location"
+              className="w-full object-cover object-top"
+            />
+          </div>
+          <div>
+            <div className="inline-flex items-center gap-2 bg-accent/10 text-accent px-3 py-1 rounded-full text-sm font-medium mb-5">
+              <MapPin className="w-3.5 h-3.5" />
+              Location Tagging
+            </div>
+            <h3 className="text-2xl font-bold text-text-primary mb-4">Tag any reference to a location</h3>
+            <p className="text-text-secondary leading-relaxed mb-6">
+              When adding or editing a reference, assign it to one or more locations from your itinerary. Your DP can pull up exactly the right mood images the moment they arrive on location.
+            </p>
+            <ul className="space-y-2.5">
+              {[
+                "Assign a reference to any location in your itinerary",
+                "One reference can apply to multiple locations",
+                "Tagged images appear in both the moodboard and itinerary",
+                "Keeps visual context right where it's needed",
               ].map((item) => (
                 <li key={item} className="flex items-center gap-2.5 text-text-secondary text-sm">
                   <Check className="w-4 h-4 text-accent shrink-0" />
@@ -297,23 +347,64 @@ export default async function LandingPage() {
           </div>
         </div>
 
-        {/* Feature 3: Shot List */}
+        {/* 5: Shot status tracking */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+          <div>
+            <div className="inline-flex items-center gap-2 bg-accent/10 text-accent px-3 py-1 rounded-full text-sm font-medium mb-5">
+              <ListChecks className="w-3.5 h-3.5" />
+              Shot Tracking
+            </div>
+            <h3 className="text-2xl font-bold text-text-primary mb-4">Track every shot from planned to complete</h3>
+            <p className="text-text-secondary leading-relaxed mb-6">
+              Mark each shot as planned, in progress, or completed as you move through your shoot day. Your whole team sees the same live status — no more checking in over walkie.
+            </p>
+            <ul className="space-y-2.5">
+              {[
+                "Three-stage status: planned, in progress, completed",
+                "Status updates are visible to the whole team instantly",
+                "Colour-coded badges make it easy to scan at a glance",
+                "Track progress across all shots in one view",
+              ].map((item) => (
+                <li key={item} className="flex items-center gap-2.5 text-text-secondary text-sm">
+                  <Check className="w-4 h-4 text-accent shrink-0" />
+                  {item}
+                </li>
+              ))}
+            </ul>
+          </div>
+          <div className="rounded-2xl overflow-hidden border border-border shadow-2xl bg-bg-card">
+            <img
+              src="/screenshots/shotstatus.png"
+              alt="Shot list showing planned, in progress and completed status badges"
+              className="w-full object-cover object-top"
+            />
+          </div>
+        </div>
+
+        {/* 6: Shot list with types and references */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+          <div className="order-last lg:order-first rounded-2xl overflow-hidden border border-border shadow-2xl bg-bg-card">
+            <img
+              src="/screenshots/shotlist.png"
+              alt="Full shot list with shot types, reference images and location tags"
+              className="w-full object-cover object-top"
+            />
+          </div>
           <div>
             <div className="inline-flex items-center gap-2 bg-accent/10 text-accent px-3 py-1 rounded-full text-sm font-medium mb-5">
               <ListChecks className="w-3.5 h-3.5" />
               Shot List
             </div>
-            <h3 className="text-2xl font-bold text-text-primary mb-4">Never miss a shot on set</h3>
+            <h3 className="text-2xl font-bold text-text-primary mb-4">Every shot, fully detailed</h3>
             <p className="text-text-secondary leading-relaxed mb-6">
-              Track every shot with title, type, reference image, and status. Mark shots in progress or completed as you go — your whole team stays in sync throughout the day.
+              Your shot list is more than a checklist. Each shot carries a title, shot type, reference image, description, and a link to the location it belongs to — everything your crew needs to execute it.
             </p>
             <ul className="space-y-2.5">
               {[
-                "Attach reference images to individual shots",
-                "Shot types: wide, close-up, aerial, and more",
-                "Status tracking: planned, in progress, completed",
-                "Linked to locations so context is always clear",
+                "Shot types: wide, medium, close-up, aerial, and more",
+                "Attach a reference image to show exactly what you're going for",
+                "Link each shot to a specific location on the itinerary",
+                "Add descriptions and notes for the crew",
               ].map((item) => (
                 <li key={item} className="flex items-center gap-2.5 text-text-secondary text-sm">
                   <Check className="w-4 h-4 text-accent shrink-0" />
@@ -322,48 +413,25 @@ export default async function LandingPage() {
               ))}
             </ul>
           </div>
-          <div className="space-y-3">
-            <div className="rounded-2xl overflow-hidden border border-border shadow-2xl bg-bg-card">
-              <img
-                src="/screenshots/shotstatus.png"
-                alt="Shot status progression from planned to completed"
-                className="w-full object-cover object-top"
-              />
-            </div>
-            <div className="rounded-xl overflow-hidden border border-border shadow-lg bg-bg-card">
-              <img
-                src="/screenshots/shotlist.png"
-                alt="Shot list with types, reference images and location tags"
-                className="w-full object-cover object-top"
-              />
-            </div>
-          </div>
         </div>
 
-        {/* Feature 4: Collaboration */}
+        {/* 7: Team collaboration */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-          <div className="order-last lg:order-first relative rounded-2xl overflow-hidden border border-border shadow-2xl bg-bg-card aspect-video flex items-center justify-center">
-            <img
-              src="/screenshots/team.png"
-              alt="Team collaboration with invite links and role management"
-              className="w-full h-full object-cover object-top"
-            />
-          </div>
           <div>
             <div className="inline-flex items-center gap-2 bg-accent/10 text-accent px-3 py-1 rounded-full text-sm font-medium mb-5">
               <Users className="w-3.5 h-3.5" />
               Team Collaboration
             </div>
-            <h3 className="text-2xl font-bold text-text-primary mb-4">Share with your crew instantly</h3>
+            <h3 className="text-2xl font-bold text-text-primary mb-4">Your whole crew, always in sync</h3>
             <p className="text-text-secondary leading-relaxed mb-6">
-              Invite your DP, AD, and producer with a single link. Viewers can browse the full plan and leave comments. Admins can edit alongside you in real time.
+              Share your project with a single invite link. Your DP, AD, producer, and crew can view the full plan, leave comments, and react to references — from any device, on or off set.
             </p>
             <ul className="space-y-2.5">
               {[
-                "Invite via link — no account required to view",
-                "Admin and viewer roles",
-                "Email notifications for comments and reactions",
-                "Works on mobile for on-set access",
+                "Invite anyone with a link — no account needed to view",
+                "Admin role lets crew members edit alongside you",
+                "Email notifications when someone comments or reacts",
+                "Works fully on mobile for quick on-set access",
               ].map((item) => (
                 <li key={item} className="flex items-center gap-2.5 text-text-secondary text-sm">
                   <Check className="w-4 h-4 text-accent shrink-0" />
@@ -371,6 +439,12 @@ export default async function LandingPage() {
                 </li>
               ))}
             </ul>
+          </div>
+          <div className="rounded-2xl overflow-hidden border border-border shadow-2xl bg-bg-card aspect-video bg-linear-to-br from-accent/10 via-bg-card to-bg-primary flex items-center justify-center">
+            <div className="text-center px-8">
+              <Users className="w-12 h-12 text-accent/40 mx-auto mb-3" />
+              <p className="text-text-muted text-sm">Screenshot coming soon</p>
+            </div>
           </div>
         </div>
       </section>
