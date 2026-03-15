@@ -279,7 +279,75 @@ export default async function LandingPage() {
           </div>
         </div>
 
-        {/* 3: Moodboard by location */}
+        {/* 3: View in Maps button */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+          <div>
+            <div className="inline-flex items-center gap-2 bg-accent/10 text-accent px-3 py-1 rounded-full text-sm font-medium mb-5">
+              <Route className="w-3.5 h-3.5" />
+              Google Maps Integration
+            </div>
+            <h3 className="text-2xl font-bold text-text-primary mb-4">One tap to open your full route</h3>
+            <p className="text-text-secondary leading-relaxed mb-6">
+              The "View in Google Maps" button at the top of your itinerary instantly opens the entire day's route in Google Maps — with every location already loaded as a stop. Share it with your driver or AD and they can navigate straight away.
+            </p>
+            <ul className="space-y-2.5">
+              {[
+                "Appears at the top of the itinerary, always visible",
+                "Opens Google Maps with all locations pre-loaded",
+                "Works on mobile — tap and go directly from your phone",
+                "No manual entry — the route is built from your itinerary",
+              ].map((item) => (
+                <li key={item} className="flex items-center gap-2.5 text-text-secondary text-sm">
+                  <Check className="w-4 h-4 text-accent shrink-0" />
+                  {item}
+                </li>
+              ))}
+            </ul>
+          </div>
+          <div className="rounded-2xl overflow-hidden border border-border shadow-2xl bg-bg-card">
+            <img
+              src="/screenshots/viewinmaps.png"
+              alt="View in Google Maps button on the itinerary stats bar"
+              className="w-full object-cover object-top"
+            />
+          </div>
+        </div>
+
+        {/* 4: Plotted map */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+          <div className="order-last lg:order-first rounded-2xl overflow-hidden border border-border shadow-2xl bg-bg-card">
+            <img
+              src="/screenshots/plottedmap.png"
+              alt="Google Maps showing the full shoot route plotted with all locations"
+              className="w-full object-cover object-top"
+            />
+          </div>
+          <div>
+            <div className="inline-flex items-center gap-2 bg-accent/10 text-accent px-3 py-1 rounded-full text-sm font-medium mb-5">
+              <Route className="w-3.5 h-3.5" />
+              Full Route Planning
+            </div>
+            <h3 className="text-2xl font-bold text-text-primary mb-4">Your entire shoot, plotted on Google Maps</h3>
+            <p className="text-text-secondary leading-relaxed mb-6">
+              See every location from your shoot plotted as a connected route on Google Maps. Know the full scope of your day before you leave — so there are no surprises on location.
+            </p>
+            <ul className="space-y-2.5">
+              {[
+                "All locations plotted as waypoints in order",
+                "See the full geography of your shoot day at a glance",
+                "Google Maps handles live traffic and navigation",
+                "Shareable — send the link to anyone on your crew",
+              ].map((item) => (
+                <li key={item} className="flex items-center gap-2.5 text-text-secondary text-sm">
+                  <Check className="w-4 h-4 text-accent shrink-0" />
+                  {item}
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+
+        {/* 5: Moodboard by location */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
           <div>
             <div className="inline-flex items-center gap-2 bg-accent/10 text-accent px-3 py-1 rounded-full text-sm font-medium mb-5">
@@ -313,7 +381,7 @@ export default async function LandingPage() {
           </div>
         </div>
 
-        {/* 4: Assign to location */}
+        {/* 6: Assign to location */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
           <div className="order-last lg:order-first rounded-2xl overflow-hidden border border-border shadow-2xl bg-bg-card">
             <img
@@ -347,7 +415,7 @@ export default async function LandingPage() {
           </div>
         </div>
 
-        {/* 5: Shot status tracking */}
+        {/* 7: Shot status tracking */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
           <div>
             <div className="inline-flex items-center gap-2 bg-accent/10 text-accent px-3 py-1 rounded-full text-sm font-medium mb-5">
@@ -381,7 +449,7 @@ export default async function LandingPage() {
           </div>
         </div>
 
-        {/* 6: Shot list with types and references */}
+        {/* 8: Shot list with types and references */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
           <div className="order-last lg:order-first rounded-2xl overflow-hidden border border-border shadow-2xl bg-bg-card">
             <img
@@ -415,7 +483,7 @@ export default async function LandingPage() {
           </div>
         </div>
 
-        {/* 7: Team collaboration */}
+        {/* 9: Team collaboration */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
           <div>
             <div className="inline-flex items-center gap-2 bg-accent/10 text-accent px-3 py-1 rounded-full text-sm font-medium mb-5">
