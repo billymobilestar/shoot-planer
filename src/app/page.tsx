@@ -172,6 +172,17 @@ export default async function LandingPage() {
         </div>
       </section>
 
+      {/* Hero product screenshot */}
+      <section className="px-6 pb-10 max-w-6xl mx-auto">
+        <div className="rounded-2xl overflow-hidden border border-border shadow-2xl bg-bg-card">
+          <img
+            src="/screenshots/projects.png"
+            alt="ShootPlaner dashboard showing all your projects"
+            className="w-full object-cover object-top"
+          />
+        </div>
+      </section>
+
       <section className="px-6 py-16 max-w-5xl mx-auto">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
           {features.map((f) => (
@@ -225,23 +236,41 @@ export default async function LandingPage() {
               ))}
             </ul>
           </div>
-          <div className="relative rounded-2xl overflow-hidden border border-border shadow-2xl bg-bg-card aspect-video flex items-center justify-center">
-            <img
-              src="/screenshots/itinerary.png"
-              alt="Itinerary planner showing locations, drive times and route"
-              className="w-full h-full object-cover object-top"
-            />
+          <div className="space-y-3">
+            <div className="rounded-2xl overflow-hidden border border-border shadow-2xl bg-bg-card">
+              <img
+                src="/screenshots/distance1.png"
+                alt="Itinerary planner with locations and drive times"
+                className="w-full object-cover object-top"
+              />
+            </div>
+            <div className="rounded-xl overflow-hidden border border-border shadow-lg bg-bg-card">
+              <img
+                src="/screenshots/distance2.png"
+                alt="Close-up of auto-calculated drive time between locations"
+                className="w-full object-cover object-top"
+              />
+            </div>
           </div>
         </div>
 
         {/* Feature 2: Moodboard — image left */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-          <div className="order-last lg:order-first relative rounded-2xl overflow-hidden border border-border shadow-2xl bg-bg-card aspect-video flex items-center justify-center">
-            <img
-              src="/screenshots/moodboard.png"
-              alt="Moodboard with reference images, platform badges and reactions"
-              className="w-full h-full object-cover object-top"
-            />
+          <div className="order-last lg:order-first space-y-3">
+            <div className="rounded-2xl overflow-hidden border border-border shadow-2xl bg-bg-card">
+              <img
+                src="/screenshots/moodboardlocations.png"
+                alt="Moodboard references organised by assigned locations"
+                className="w-full object-cover object-top"
+              />
+            </div>
+            <div className="rounded-xl overflow-hidden border border-border shadow-lg bg-bg-card">
+              <img
+                src="/screenshots/assignlocations.png"
+                alt="Assigning a location to a reference image"
+                className="w-full object-cover object-top"
+              />
+            </div>
           </div>
           <div>
             <div className="inline-flex items-center gap-2 bg-accent/10 text-accent px-3 py-1 rounded-full text-sm font-medium mb-5">
@@ -293,12 +322,21 @@ export default async function LandingPage() {
               ))}
             </ul>
           </div>
-          <div className="relative rounded-2xl overflow-hidden border border-border shadow-2xl bg-bg-card aspect-video flex items-center justify-center">
-            <img
-              src="/screenshots/shotlist.png"
-              alt="Shot list with status badges, shot types and reference images"
-              className="w-full h-full object-cover object-top"
-            />
+          <div className="space-y-3">
+            <div className="rounded-2xl overflow-hidden border border-border shadow-2xl bg-bg-card">
+              <img
+                src="/screenshots/shotstatus.png"
+                alt="Shot status progression from planned to completed"
+                className="w-full object-cover object-top"
+              />
+            </div>
+            <div className="rounded-xl overflow-hidden border border-border shadow-lg bg-bg-card">
+              <img
+                src="/screenshots/shotlist.png"
+                alt="Shot list with types, reference images and location tags"
+                className="w-full object-cover object-top"
+              />
+            </div>
           </div>
         </div>
 
