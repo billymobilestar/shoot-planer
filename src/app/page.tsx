@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { auth } from "@clerk/nextjs/server";
 import Link from "next/link";
-import { MapPin, Camera, ListChecks, Users } from "lucide-react";
+import { MapPin, Camera, ListChecks, Users, Route, Check } from "lucide-react";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -188,6 +188,174 @@ export default async function LandingPage() {
               </p>
             </div>
           ))}
+        </div>
+      </section>
+
+      {/* Feature Showcase */}
+      <section className="px-6 py-20 max-w-6xl mx-auto space-y-28">
+        <div className="text-center">
+          <h2 className="text-3xl md:text-4xl font-bold text-text-primary">Everything on one page</h2>
+          <p className="mt-4 text-text-secondary max-w-xl mx-auto">
+            No more spreadsheets, group chats, or lost call sheets. ShootPlaner keeps your whole production in sync.
+          </p>
+        </div>
+
+        {/* Feature 1: Itinerary */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+          <div>
+            <div className="inline-flex items-center gap-2 bg-accent/10 text-accent px-3 py-1 rounded-full text-sm font-medium mb-5">
+              <MapPin className="w-3.5 h-3.5" />
+              Itinerary Planner
+            </div>
+            <h3 className="text-2xl font-bold text-text-primary mb-4">Plan every location, every day</h3>
+            <p className="text-text-secondary leading-relaxed mb-6">
+              Build your shoot schedule day by day. Add locations, auto-calculate drive times between each stop, and share a Google Maps route with your entire crew in one tap.
+            </p>
+            <ul className="space-y-2.5">
+              {[
+                "Drag and drop to reorder locations",
+                "Drive time calculated automatically",
+                "One-click Google Maps route for the full day",
+                "Team comments on every location",
+              ].map((item) => (
+                <li key={item} className="flex items-center gap-2.5 text-text-secondary text-sm">
+                  <Check className="w-4 h-4 text-accent shrink-0" />
+                  {item}
+                </li>
+              ))}
+            </ul>
+          </div>
+          <div className="relative rounded-2xl overflow-hidden border border-border shadow-2xl bg-bg-card aspect-video flex items-center justify-center">
+            <img
+              src="/screenshots/itinerary.png"
+              alt="Itinerary planner showing locations, drive times and route"
+              className="w-full h-full object-cover object-top"
+            />
+          </div>
+        </div>
+
+        {/* Feature 2: Moodboard — image left */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+          <div className="order-last lg:order-first relative rounded-2xl overflow-hidden border border-border shadow-2xl bg-bg-card aspect-video flex items-center justify-center">
+            <img
+              src="/screenshots/moodboard.png"
+              alt="Moodboard with reference images, platform badges and reactions"
+              className="w-full h-full object-cover object-top"
+            />
+          </div>
+          <div>
+            <div className="inline-flex items-center gap-2 bg-accent/10 text-accent px-3 py-1 rounded-full text-sm font-medium mb-5">
+              <Camera className="w-3.5 h-3.5" />
+              Moodboard
+            </div>
+            <h3 className="text-2xl font-bold text-text-primary mb-4">Visual direction, always in reach</h3>
+            <p className="text-text-secondary leading-relaxed mb-6">
+              Upload reference images or paste links from Instagram, Pinterest, TikTok, and more. Organise by board, tag locations, and let your crew react and comment in real time.
+            </p>
+            <ul className="space-y-2.5">
+              {[
+                "Paste links from any platform — auto-preview generated",
+                "Organise into boards per scene or look",
+                "Emoji reactions and comments from your crew",
+                "Assign references directly to locations",
+              ].map((item) => (
+                <li key={item} className="flex items-center gap-2.5 text-text-secondary text-sm">
+                  <Check className="w-4 h-4 text-accent shrink-0" />
+                  {item}
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+
+        {/* Feature 3: Shot List */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+          <div>
+            <div className="inline-flex items-center gap-2 bg-accent/10 text-accent px-3 py-1 rounded-full text-sm font-medium mb-5">
+              <ListChecks className="w-3.5 h-3.5" />
+              Shot List
+            </div>
+            <h3 className="text-2xl font-bold text-text-primary mb-4">Never miss a shot on set</h3>
+            <p className="text-text-secondary leading-relaxed mb-6">
+              Track every shot with title, type, reference image, and status. Mark shots in progress or completed as you go — your whole team stays in sync throughout the day.
+            </p>
+            <ul className="space-y-2.5">
+              {[
+                "Attach reference images to individual shots",
+                "Shot types: wide, close-up, aerial, and more",
+                "Status tracking: planned, in progress, completed",
+                "Linked to locations so context is always clear",
+              ].map((item) => (
+                <li key={item} className="flex items-center gap-2.5 text-text-secondary text-sm">
+                  <Check className="w-4 h-4 text-accent shrink-0" />
+                  {item}
+                </li>
+              ))}
+            </ul>
+          </div>
+          <div className="relative rounded-2xl overflow-hidden border border-border shadow-2xl bg-bg-card aspect-video flex items-center justify-center">
+            <img
+              src="/screenshots/shotlist.png"
+              alt="Shot list with status badges, shot types and reference images"
+              className="w-full h-full object-cover object-top"
+            />
+          </div>
+        </div>
+
+        {/* Feature 4: Collaboration */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+          <div className="order-last lg:order-first relative rounded-2xl overflow-hidden border border-border shadow-2xl bg-bg-card aspect-video flex items-center justify-center">
+            <img
+              src="/screenshots/team.png"
+              alt="Team collaboration with invite links and role management"
+              className="w-full h-full object-cover object-top"
+            />
+          </div>
+          <div>
+            <div className="inline-flex items-center gap-2 bg-accent/10 text-accent px-3 py-1 rounded-full text-sm font-medium mb-5">
+              <Users className="w-3.5 h-3.5" />
+              Team Collaboration
+            </div>
+            <h3 className="text-2xl font-bold text-text-primary mb-4">Share with your crew instantly</h3>
+            <p className="text-text-secondary leading-relaxed mb-6">
+              Invite your DP, AD, and producer with a single link. Viewers can browse the full plan and leave comments. Admins can edit alongside you in real time.
+            </p>
+            <ul className="space-y-2.5">
+              {[
+                "Invite via link — no account required to view",
+                "Admin and viewer roles",
+                "Email notifications for comments and reactions",
+                "Works on mobile for on-set access",
+              ].map((item) => (
+                <li key={item} className="flex items-center gap-2.5 text-text-secondary text-sm">
+                  <Check className="w-4 h-4 text-accent shrink-0" />
+                  {item}
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      {/* Final CTA */}
+      <section className="px-6 py-20 text-center bg-bg-card border-t border-border">
+        <h2 className="text-3xl font-bold text-text-primary mb-4">Ready to plan your next shoot?</h2>
+        <p className="text-text-secondary mb-8 max-w-md mx-auto">
+          Free to start. No credit card required. Used by filmmakers planning real productions.
+        </p>
+        <div className="flex flex-wrap gap-4 justify-center">
+          <Link
+            href="/sign-up"
+            className="px-8 py-3 rounded-lg bg-accent hover:bg-accent-hover text-white font-medium text-lg transition-colors"
+          >
+            Get Started Free
+          </Link>
+          <Link
+            href="/demo"
+            className="px-8 py-3 rounded-lg border border-border text-text-primary hover:bg-bg-card-hover transition-colors text-lg"
+          >
+            View Live Demo
+          </Link>
         </div>
       </section>
 
