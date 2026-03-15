@@ -286,15 +286,16 @@ export default function DemoView({ project, daysWithLocations, locations, refere
                                 </div>
                               )}
 
+                              <div>
+                                {loc.photo_url && (
+                                  <img
+                                    src={loc.photo_url}
+                                    alt={loc.name}
+                                    className="w-full h-52 sm:h-64 object-cover"
+                                  />
+                                )}
                               <div className="px-5 py-4">
                                 <div className="flex items-start gap-3">
-                                  {loc.photo_url && (
-                                    <img
-                                      src={loc.photo_url}
-                                      alt={loc.name}
-                                      className="w-14 h-14 rounded-lg object-cover shrink-0"
-                                    />
-                                  )}
                                   <div className="min-w-0 flex-1">
                                     <div className="flex items-start justify-between gap-2">
                                       <div>
@@ -353,6 +354,7 @@ export default function DemoView({ project, daysWithLocations, locations, refere
                                     )}
                                   </div>
                                 </div>
+                              </div>
                               </div>
                             </div>
                           );
