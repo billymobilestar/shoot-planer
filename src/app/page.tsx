@@ -116,7 +116,13 @@ export default async function LandingPage() {
     <div className="min-h-screen bg-bg-primary">
       <nav className="border-b border-border px-6 py-4 flex items-center justify-between">
         <span className="text-xl font-bold text-accent">ShootPlaner</span>
-        <div className="flex gap-3">
+        <div className="flex gap-3 items-center">
+          <Link
+            href="/demo"
+            className="hidden sm:inline-flex px-4 py-2 rounded-lg text-text-secondary hover:text-text-primary transition-colors text-sm"
+          >
+            Demo
+          </Link>
           <Link
             href="/sign-in"
             className="px-4 py-2 rounded-lg border border-border text-text-primary hover:bg-bg-card-hover transition-colors"
@@ -143,7 +149,7 @@ export default async function LandingPage() {
             The collaborative shoot planner for filmmakers. Organize locations,
             build moodboards, manage shot lists, and share with your crew.
           </p>
-          <div className="mt-10 flex gap-4 justify-center">
+          <div className="mt-10 flex flex-wrap gap-4 justify-center">
             <Link
               href="/sign-up"
               className="px-6 py-3 rounded-lg bg-accent hover:bg-accent-hover text-white font-medium text-lg transition-colors"
@@ -151,12 +157,18 @@ export default async function LandingPage() {
               Get Started Free
             </Link>
             <Link
-              href="/sign-in"
-              className="px-6 py-3 rounded-lg border border-border text-text-primary hover:bg-bg-card-hover transition-colors text-lg"
+              href="/demo"
+              className="px-6 py-3 rounded-lg border border-border text-text-primary hover:bg-bg-card-hover transition-colors text-lg flex items-center gap-2"
             >
-              Sign In
+              <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <polygon points="5 3 19 12 5 21 5 3" />
+              </svg>
+              View Live Demo
             </Link>
           </div>
+          <p className="mt-4 text-sm text-text-muted">
+            See a real production planned with ShootPlaner
+          </p>
         </div>
       </section>
 
