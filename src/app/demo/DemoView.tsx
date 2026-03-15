@@ -4,7 +4,8 @@ import { useState } from "react";
 import Link from "next/link";
 import {
   MapPin, Camera, ListChecks, Car, Clock, ExternalLink,
-  Link2, Layers, ChevronDown, ChevronUp, ArrowRight, Play
+  Link2, Layers, ChevronDown, ChevronUp, ArrowRight, Play,
+  CalendarDays, Route, Navigation, MessageSquare,
 } from "lucide-react";
 
 interface Location {
@@ -118,6 +119,19 @@ function detectPlatform(url: string): { label: string; style: string } {
   }
 }
 
+function generateMapsUrl(locs: Location[]): string {
+  const valid = locs.filter((l) => l.latitude && l.longitude);
+  if (valid.length === 0) return "https://maps.google.com";
+  if (valid.length === 1) return `https://www.google.com/maps/search/?api=1&query=${valid[0].latitude},${valid[0].longitude}`;
+  const origin = valid[0];
+  const dest = valid[valid.length - 1];
+  const waypoints = valid.slice(1, -1);
+  let url = `https://www.google.com/maps/dir/?api=1&origin=${origin.latitude},${origin.longitude}&destination=${dest.latitude},${dest.longitude}`;
+  if (waypoints.length > 0) url += `&waypoints=${encodeURIComponent(waypoints.map((w) => `${w.latitude},${w.longitude}`).join("|"))}`;
+  url += `&travelmode=driving`;
+  return url;
+}
+
 function timeAgo(dateStr: string): string {
   const diff = Date.now() - new Date(dateStr).getTime();
   const days = Math.floor(diff / 86400000);
@@ -156,7 +170,7 @@ export default function DemoView({ project, daysWithLocations, locations, refere
       <nav className="border-b border-border px-6 py-3 flex items-center justify-between sticky top-0 z-50 bg-bg-card">
         <Link href="/" className="text-xl font-bold text-accent">ShootPlaner</Link>
         <div className="flex items-center gap-3">
-          <span className="hidden sm:inline text-xs text-text-muted bg-accent/10 text-accent border border-accent/20 px-2.5 py-1 rounded-full font-medium">
+          <span className="hidden sm:inline text-xs bg-accent/10 text-accent border border-accent/20 px-2.5 py-1 rounded-full font-medium">
             Demo Project
           </span>
           <Link
@@ -229,143 +243,252 @@ export default function DemoView({ project, daysWithLocations, locations, refere
 
         <div className="py-6">
           {/* ── ITINERARY ── */}
-          {tab === "itinerary" && (
-            <div className="space-y-6">
-              {daysWithLocations.map((day) => {
-                const expanded = expandedDays.has(day.id);
-                return (
-                  <div key={day.id} className="bg-bg-card border border-border rounded-xl overflow-hidden">
-                    {/* Day header */}
-                    <button
-                      onClick={() => toggleDay(day.id)}
-                      className="w-full flex items-center justify-between px-5 py-4 hover:bg-bg-card-hover transition-colors"
+          {tab === "itinerary" && (() => {
+            const allLocs = daysWithLocations.flatMap((d) => d.locations);
+            const totalTravelMinutes = allLocs.reduce((sum, loc) => {
+              const t = loc.drive_time_from_previous;
+              if (!t) return sum;
+              let mins = 0;
+              const hMatch = t.match(/(\d+)\s*hour/);
+              const mMatch = t.match(/(\d+)\s*min/);
+              if (hMatch) mins += parseInt(hMatch[1]) * 60;
+              if (mMatch) mins += parseInt(mMatch[1]);
+              return sum + mins;
+            }, 0);
+            const travelHours = Math.floor(totalTravelMinutes / 60);
+            const travelMins = totalTravelMinutes % 60;
+            const routeUrl = generateMapsUrl(allLocs);
+
+            return (
+              <div>
+                {/* Stats Bar */}
+                <div className="flex flex-wrap items-center gap-4 mb-6 p-4 bg-bg-card border border-border rounded-xl">
+                  <div className="flex items-center gap-2 text-sm">
+                    <CalendarDays className="w-4 h-4 text-accent" />
+                    <span className="text-text-primary font-medium">{daysWithLocations.length}</span>
+                    <span className="text-text-secondary">days</span>
+                  </div>
+                  <div className="w-px h-4 bg-border" />
+                  <div className="flex items-center gap-2 text-sm">
+                    <MapPin className="w-4 h-4 text-accent" />
+                    <span className="text-text-primary font-medium">{allLocs.length}</span>
+                    <span className="text-text-secondary">locations</span>
+                  </div>
+                  {totalTravelMinutes > 0 && (
+                    <>
+                      <div className="w-px h-4 bg-border" />
+                      <div className="flex items-center gap-2 text-sm">
+                        <Clock className="w-4 h-4 text-accent" />
+                        <span className="text-text-primary font-medium">
+                          {travelHours > 0 ? `${travelHours}h ${travelMins}m` : `${travelMins}m`}
+                        </span>
+                        <span className="text-text-secondary">travel</span>
+                      </div>
+                    </>
+                  )}
+                  <div className="flex-1" />
+                  {allLocs.length > 0 && (
+                    <a
+                      href={routeUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-2 text-sm bg-accent hover:bg-accent-hover text-white rounded-lg px-3 py-2 transition-colors"
                     >
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-lg bg-accent/15 flex items-center justify-center shrink-0">
-                          <span className="text-accent text-sm font-bold">{day.day_number}</span>
-                        </div>
-                        <div className="text-left">
-                          <p className="font-semibold text-text-primary">
-                            {day.title || `Day ${day.day_number}`}
-                          </p>
-                          {day.date && (
-                            <p className="text-xs text-text-muted">
-                              {new Date(day.date).toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}
-                            </p>
-                          )}
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <span className="text-xs text-text-muted">{day.locations.length} location{day.locations.length !== 1 ? "s" : ""}</span>
-                        {expanded ? <ChevronUp className="w-4 h-4 text-text-muted" /> : <ChevronDown className="w-4 h-4 text-text-muted" />}
-                      </div>
-                    </button>
+                      <Route className="w-4 h-4" />
+                      View in Google Maps
+                    </a>
+                  )}
+                </div>
 
-                    {/* Locations */}
-                    {expanded && day.locations.length > 0 && (
-                      <div className="border-t border-border divide-y divide-border">
-                        {day.locations.map((loc, idx) => {
-                          const locNotes = notes.filter((n) => n.location_id === loc.id);
-                          const locExpanded = expandedLocs.has(loc.id);
-                          const mapsUrl = loc.latitude && loc.longitude
-                            ? `https://www.google.com/maps/search/?api=1&query=${loc.latitude},${loc.longitude}`
-                            : loc.address
-                            ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(loc.address)}`
-                            : null;
-
-                          return (
-                            <div key={loc.id}>
-                              {/* Drive time connector */}
-                              {idx > 0 && loc.drive_time_from_previous && (
-                                <div className="flex items-center gap-2 px-5 py-2 bg-bg-primary text-xs text-text-muted">
-                                  <Car className="w-3.5 h-3.5 shrink-0" />
-                                  <span>{loc.drive_time_from_previous}</span>
-                                  {loc.drive_distance_from_previous && (
-                                    <span className="text-text-muted/60">· {loc.drive_distance_from_previous}</span>
-                                  )}
-                                </div>
-                              )}
-
-                              <div>
-                                {loc.photo_url && (
-                                  <img
-                                    src={loc.photo_url}
-                                    alt={loc.name}
-                                    className="w-full h-52 sm:h-64 object-cover"
-                                  />
+                {/* Days */}
+                <div className="space-y-6">
+                  {daysWithLocations.map((day) => {
+                    const expanded = expandedDays.has(day.id);
+                    return (
+                      <div key={day.id} className="bg-bg-card border border-border rounded-xl overflow-hidden">
+                        {/* Day Header — matches DayColumn */}
+                        <div className="bg-bg-card-hover px-5 py-4 flex items-center justify-between">
+                          <div className="flex items-center gap-4">
+                            <div className="w-12 h-12 rounded-xl bg-accent/15 flex flex-col items-center justify-center shrink-0">
+                              <span className="text-accent font-bold text-lg leading-none">{day.day_number}</span>
+                              <span className="text-accent/60 text-[10px] uppercase tracking-wider">Day</span>
+                            </div>
+                            <div>
+                              <h3 className="font-semibold text-text-primary text-lg">
+                                {day.title || `Day ${day.day_number}`}
+                              </h3>
+                              <div className="flex items-center gap-2 mt-0.5">
+                                {day.date && (
+                                  <span className="text-text-secondary text-sm">
+                                    {new Date(day.date + "T00:00:00").toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })}
+                                  </span>
                                 )}
-                              <div className="px-5 py-4">
-                                <div className="flex items-start gap-3">
-                                  <div className="min-w-0 flex-1">
-                                    <div className="flex items-start justify-between gap-2">
-                                      <div>
-                                        <h3 className="font-medium text-text-primary">{loc.name}</h3>
-                                        {loc.address && (
-                                          <p className="text-xs text-text-muted mt-0.5 flex items-center gap-1">
-                                            <MapPin className="w-3 h-3 shrink-0" />
-                                            {loc.address}
-                                          </p>
-                                        )}
-                                      </div>
-                                      {mapsUrl && (
-                                        <a
-                                          href={mapsUrl}
-                                          target="_blank"
-                                          rel="noopener noreferrer"
-                                          className="shrink-0 text-xs text-accent hover:text-accent-hover flex items-center gap-1"
-                                        >
-                                          <ExternalLink className="w-3 h-3" />
-                                          <span className="hidden sm:inline">Maps</span>
-                                        </a>
+                                <span className="text-text-muted text-sm flex items-center gap-1">
+                                  <MapPin className="w-3 h-3" />
+                                  {day.locations.length} {day.locations.length === 1 ? "location" : "locations"}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                          <button
+                            onClick={() => toggleDay(day.id)}
+                            className="text-text-muted hover:text-text-primary transition-colors"
+                          >
+                            {expanded ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
+                          </button>
+                        </div>
+
+                        {/* Locations */}
+                        {expanded && (
+                          <div className="p-4 space-y-0">
+                            {day.locations.map((loc, idx) => {
+                              const locNotes = notes.filter((n) => n.location_id === loc.id);
+                              const locExpanded = expandedLocs.has(loc.id);
+                              const mapsUrl = loc.latitude && loc.longitude
+                                ? `https://www.google.com/maps/search/?api=1&query=${loc.latitude},${loc.longitude}`
+                                : loc.address
+                                ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(loc.address)}`
+                                : null;
+
+                              return (
+                                <div key={loc.id}>
+                                  {/* Drive connector */}
+                                  {idx > 0 && (
+                                    <div className="flex items-center gap-3 py-2.5 px-3 my-1 rounded-lg bg-bg-primary text-xs text-text-muted">
+                                      <Car className="w-3.5 h-3.5 shrink-0 text-accent" />
+                                      {loc.drive_time_from_previous ? (
+                                        <>
+                                          <span className="font-medium text-text-secondary">{loc.drive_time_from_previous}</span>
+                                          {loc.drive_distance_from_previous && (
+                                            <span className="text-text-muted/70">· {loc.drive_distance_from_previous}</span>
+                                          )}
+                                        </>
+                                      ) : (
+                                        <span className="text-text-muted/60 italic">Drive time not calculated</span>
                                       )}
                                     </div>
-                                    {loc.description && (
-                                      <p className="text-sm text-text-secondary mt-1">{loc.description}</p>
+                                  )}
+
+                                  {/* Location Card — matches LocationCard */}
+                                  <div className="bg-bg-card-hover border border-border rounded-xl overflow-hidden">
+                                    {/* Hero image with gradient overlay */}
+                                    {loc.photo_url ? (
+                                      <div className="relative">
+                                        <img
+                                          src={loc.photo_url}
+                                          alt={loc.name}
+                                          className="w-full object-cover max-h-72"
+                                        />
+                                        <div className="absolute inset-0 bg-linear-to-t from-black/60 via-transparent to-transparent" />
+                                        <div className="absolute bottom-0 left-0 right-0 p-4">
+                                          <h4 className="font-semibold text-white text-lg">{loc.name}</h4>
+                                          {loc.address && (
+                                            <div className="flex items-center gap-1.5 mt-1 text-white/70 text-sm">
+                                              <MapPin className="w-3.5 h-3.5 shrink-0" />
+                                              <span className="truncate">{loc.address}</span>
+                                            </div>
+                                          )}
+                                        </div>
+                                      </div>
+                                    ) : (
+                                      /* No-image header */
+                                      <div className="flex items-center gap-3 p-4">
+                                        <div className="w-10 h-10 rounded-lg bg-accent/15 flex items-center justify-center shrink-0">
+                                          <MapPin className="w-5 h-5 text-accent" />
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                          <h4 className="font-semibold text-text-primary">{loc.name}</h4>
+                                          {loc.address && (
+                                            <p className="text-text-secondary text-sm truncate mt-0.5">{loc.address}</p>
+                                          )}
+                                        </div>
+                                      </div>
                                     )}
 
-                                    {/* Notes toggle */}
-                                    {locNotes.length > 0 && (
+                                    {/* Actions bar (matches LocationCard toggle bar) */}
+                                    <div className="flex items-center justify-between px-4 py-2">
+                                      <div className="flex items-center gap-3">
+                                        {mapsUrl && (
+                                          <a
+                                            href={mapsUrl}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="flex items-center gap-1.5 text-xs text-accent hover:text-accent-hover transition-colors"
+                                          >
+                                            <Navigation className="w-3.5 h-3.5" />
+                                            Directions
+                                          </a>
+                                        )}
+                                      </div>
                                       <button
                                         onClick={() => toggleLoc(loc.id)}
-                                        className="mt-2 text-xs text-accent hover:text-accent-hover flex items-center gap-1"
+                                        className="text-text-muted hover:text-text-primary transition-colors flex items-center gap-1 text-xs"
                                       >
-                                        {locExpanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
-                                        {locNotes.length} note{locNotes.length !== 1 ? "s" : ""}
+                                        {locExpanded ? "Less" : "More"}
+                                        {locExpanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
                                       </button>
-                                    )}
+                                    </div>
 
+                                    {/* Expanded details */}
                                     {locExpanded && (
-                                      <div className="mt-2 space-y-2">
-                                        {locNotes.map((note) => (
-                                          <div key={note.id} className="flex gap-2 text-sm">
-                                            <div className="w-5 h-5 rounded-full bg-accent/20 flex items-center justify-center shrink-0 mt-0.5">
-                                              <span className="text-[9px] text-accent font-bold">
-                                                {(note.user_name || "?")[0].toUpperCase()}
-                                              </span>
-                                            </div>
-                                            <div>
-                                              <span className="text-xs font-medium text-text-secondary">{note.user_name}</span>
-                                              <span className="text-xs text-text-muted ml-1.5">{timeAgo(note.created_at)}</span>
-                                              <p className="text-text-secondary text-sm mt-0.5">{note.content}</p>
+                                      <div className="border-t border-border p-4 space-y-3">
+                                        {loc.description && (
+                                          <p className="text-text-secondary text-sm leading-relaxed">{loc.description}</p>
+                                        )}
+                                        {loc.notes && (
+                                          <div className="bg-bg-primary rounded-lg p-3 border border-border">
+                                            <p className="text-text-secondary text-sm leading-relaxed">{loc.notes}</p>
+                                          </div>
+                                        )}
+                                        {/* Notes/Comments */}
+                                        {locNotes.length > 0 && (
+                                          <div className="pt-1 border-t border-border">
+                                            <button
+                                              onClick={() => {/* already expanded via locExpanded */}}
+                                              className="flex items-center gap-2 text-sm text-text-secondary mb-2"
+                                            >
+                                              <MessageSquare className="w-4 h-4" />
+                                              Comments ({locNotes.length})
+                                            </button>
+                                            <div className="space-y-2">
+                                              {locNotes.map((note) => (
+                                                <div key={note.id} className="flex gap-2">
+                                                  <div className="w-6 h-6 rounded-full bg-accent/20 flex items-center justify-center shrink-0 mt-0.5">
+                                                    <span className="text-[10px] text-accent font-bold">
+                                                      {(note.user_name || "?")[0].toUpperCase()}
+                                                    </span>
+                                                  </div>
+                                                  <div>
+                                                    <span className="text-xs font-medium text-text-secondary">{note.user_name}</span>
+                                                    <span className="text-xs text-text-muted ml-1.5">{timeAgo(note.created_at)}</span>
+                                                    <p className="text-text-secondary text-sm mt-0.5">{note.content}</p>
+                                                  </div>
+                                                </div>
+                                              ))}
                                             </div>
                                           </div>
-                                        ))}
+                                        )}
                                       </div>
                                     )}
                                   </div>
                                 </div>
+                              );
+                            })}
+
+                            {day.locations.length === 0 && (
+                              <div className="py-10 text-center text-text-muted text-sm border border-dashed border-border rounded-lg">
+                                No locations for this day.
                               </div>
-                              </div>
-                            </div>
-                          );
-                        })}
+                            )}
+                          </div>
+                        )}
                       </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          )}
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })()}
 
           {/* ── MOODBOARD ── */}
           {tab === "moodboard" && (
