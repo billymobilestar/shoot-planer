@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { auth } from "@clerk/nextjs/server";
 import Link from "next/link";
-import { MapPin, Camera, ListChecks, Users, Route, Check } from "lucide-react";
+import { MapPin, Camera, ListChecks, Users, Route, Check, CalendarDays } from "lucide-react";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -245,7 +245,41 @@ export default async function LandingPage() {
           </div>
         </div>
 
-        {/* 2: Drive time auto-calculation */}
+        {/* 2: Stats summary bar */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+          <div className="order-last lg:order-first rounded-2xl overflow-hidden border border-border shadow-2xl bg-bg-card">
+            <img
+              src="/screenshots/calculations.png"
+              alt="Stats bar showing total shoot days, locations and travel time"
+              className="w-full object-cover object-top"
+            />
+          </div>
+          <div>
+            <div className="inline-flex items-center gap-2 bg-accent/10 text-accent px-3 py-1 rounded-full text-sm font-medium mb-5">
+              <CalendarDays className="w-3.5 h-3.5" />
+              Production Overview
+            </div>
+            <h3 className="text-2xl font-bold text-text-primary mb-4">Your shoot stats, calculated instantly</h3>
+            <p className="text-text-secondary leading-relaxed mb-6">
+              At a glance, ShootPlaner totals up your entire production — how many shoot days, how many locations, and the total travel time across all of them. No spreadsheet needed.
+            </p>
+            <ul className="space-y-2.5">
+              {[
+                "Total shoot days counted automatically",
+                "All locations across every day totalled",
+                "Cumulative travel time calculated from drive times",
+                "Updates live as you add or remove locations",
+              ].map((item) => (
+                <li key={item} className="flex items-center gap-2.5 text-text-secondary text-sm">
+                  <Check className="w-4 h-4 text-accent shrink-0" />
+                  {item}
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+
+        {/* 3: Drive time auto-calculation */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
           <div className="order-last lg:order-first rounded-2xl overflow-hidden border border-border shadow-2xl bg-bg-card">
             <img
