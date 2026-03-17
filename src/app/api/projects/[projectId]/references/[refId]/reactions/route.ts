@@ -61,7 +61,7 @@ export async function POST(
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
   const actorName = getDisplayName(user);
-  createNotifications({
+  await createNotifications({
     projectId,
     actorUserId: userId,
     actorName,

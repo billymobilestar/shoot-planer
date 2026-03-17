@@ -173,6 +173,18 @@ export default async function LandingPage() {
       </section>
 
       {/* Hero product screenshot */}
+      <section className="px-6 pb-16 max-w-7xl mx-auto">
+        <div className="relative rounded-2xl overflow-hidden border border-border shadow-[0_32px_80px_-12px_rgba(0,0,0,0.5)] ring-1 ring-white/5">
+          <img
+            src="/screenshots/snapshot.png"
+            alt="ShootPlaner — full project view"
+            className="w-full h-auto block"
+          />
+          <div className="absolute inset-0 rounded-2xl ring-1 ring-inset ring-white/5 pointer-events-none" />
+        </div>
+      </section>
+
+      {/* Dashboard screenshot */}
       <section className="px-6 pb-10 max-w-6xl mx-auto">
         <div className="rounded-2xl overflow-hidden border border-border shadow-2xl bg-bg-card">
           <img

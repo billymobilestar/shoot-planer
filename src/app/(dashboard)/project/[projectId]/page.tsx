@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, useEffect, use, useRef } from "react";
+import { useUser } from "@clerk/nextjs";
 import { useRouter, useSearchParams } from "next/navigation";
-import { MapPin, Camera, ListChecks, Users, ArrowLeft, Pencil, Check, X, Upload } from "lucide-react";
+import { MapPin, Camera, ListChecks, Users, ArrowLeft, Pencil, Check, X, Upload, Download, CalendarDays, ArrowRight } from "lucide-react";
 import { Project, ShootDayWithLocations } from "@/lib/types";
 import ItineraryView from "@/components/itinerary/ItineraryView";
 import ReferencesView from "@/components/references/ReferencesView";
@@ -25,6 +26,8 @@ type TabId = (typeof tabs)[number]["id"];
 
 export default function ProjectPage({ params }: { params: Promise<{ projectId: string }> }) {
   const { projectId } = use(params);
+  const { user } = useUser();
+  const currentUserId = user?.id ?? "";
   const searchParams = useSearchParams();
   const [project, setProject] = useState<ProjectData | null>(null);
   const [activeTab, setActiveTab] = useState<TabId>(() => {
@@ -41,6 +44,7 @@ export default function ProjectPage({ params }: { params: Promise<{ projectId: s
   const [editingName, setEditingName] = useState(false);
   const [nameValue, setNameValue] = useState("");
   const [uploadingCover, setUploadingCover] = useState(false);
+  const [daysCount, setDaysCount] = useState(0);
   const coverInputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
 
@@ -50,6 +54,7 @@ export default function ProjectPage({ params }: { params: Promise<{ projectId: s
       const data = await res.json();
       setProject(data);
       setNameValue(data.name);
+      setDaysCount(data.days?.length ?? 0);
     } else {
       router.push("/dashboard");
     }
@@ -91,6 +96,15 @@ export default function ProjectPage({ params }: { params: Promise<{ projectId: s
     });
     setProject((p) => (p ? { ...p, name: nameValue.trim() } : p));
     setEditingName(false);
+  }
+
+  async function saveStartDate(date: string) {
+    await fetch(`/api/projects/${projectId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ start_date: date || null }),
+    });
+    setProject((p) => (p ? { ...p, start_date: date || null } : p));
   }
 
   async function handleCoverUpload(e: React.ChangeEvent<HTMLInputElement>) {
@@ -139,13 +153,23 @@ export default function ProjectPage({ params }: { params: Promise<{ projectId: s
   return (
     <div className="max-w-7xl mx-auto px-6 py-6">
       {/* Back button */}
-      <button
-        onClick={() => router.push("/dashboard")}
-        className="flex items-center gap-1.5 text-text-secondary hover:text-text-primary transition-colors text-sm mb-4"
-      >
-        <ArrowLeft className="w-4 h-4" />
-        Back to Projects
-      </button>
+      <div className="flex items-center justify-between mb-4">
+        <button
+          onClick={() => router.push("/dashboard")}
+          className="flex items-center gap-1.5 text-text-secondary hover:text-text-primary transition-colors text-sm"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          Back to Projects
+        </button>
+        <a
+          href={`/api/projects/${projectId}/export`}
+          download
+          className="flex items-center gap-1.5 text-text-secondary hover:text-text-primary transition-colors text-sm"
+        >
+          <Download className="w-4 h-4" />
+          <span className="hidden sm:inline">Export</span>
+        </a>
+      </div>
 
       {/* Cover Photo + Header */}
       <div className="relative mb-6 rounded-xl overflow-hidden border border-border">
@@ -240,6 +264,89 @@ export default function ProjectPage({ params }: { params: Promise<{ projectId: s
         </div>
       </div>
 
+      {/* Shoot Date Banner */}
+      {(() => {
+        const startDate = project.start_date;
+        const endDate = startDate && daysCount > 0
+          ? (() => {
+              const d = new Date(startDate + "T00:00:00");
+              d.setDate(d.getDate() + daysCount - 1);
+              return d;
+            })()
+          : null;
+        const fmtDate = (d: Date) => d.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", year: "numeric" });
+        const fmtStart = startDate ? fmtDate(new Date(startDate + "T00:00:00")) : "";
+
+        if (!startDate && canEdit) {
+          return (
+            <div className="mb-4 rounded-xl border-2 border-dashed border-accent/40 bg-accent/5 p-4 flex flex-col sm:flex-row items-start sm:items-center gap-3">
+              <div className="flex items-center gap-3 flex-1">
+                <div className="w-10 h-10 rounded-lg bg-accent/10 flex items-center justify-center shrink-0">
+                  <CalendarDays className="w-5 h-5 text-accent" />
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-text-primary">When does your shoot start?</p>
+                  <p className="text-xs text-text-muted mt-0.5">Set a start date to see dates on each day of your schedule</p>
+                </div>
+              </div>
+              <input
+                type="date"
+                value=""
+                onChange={(e) => saveStartDate(e.target.value)}
+                className="bg-accent text-white text-sm font-medium rounded-lg px-4 py-2 cursor-pointer focus:outline-none hover:bg-accent-hover transition-colors"
+              />
+            </div>
+          );
+        }
+
+        if (startDate) {
+          return (
+            <div className="mb-4 rounded-xl border border-border bg-bg-card p-4 flex flex-col sm:flex-row items-start sm:items-center gap-3">
+              <div className="flex items-center gap-3 flex-1 min-w-0">
+                <div className="w-10 h-10 rounded-lg bg-accent/10 flex items-center justify-center shrink-0">
+                  <CalendarDays className="w-5 h-5 text-accent" />
+                </div>
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2 text-text-primary font-semibold text-sm flex-wrap">
+                    <span>{fmtStart}</span>
+                    {endDate && daysCount > 1 && (
+                      <>
+                        <ArrowRight className="w-3.5 h-3.5 text-text-muted shrink-0" />
+                        <span>{fmtDate(endDate)}</span>
+                      </>
+                    )}
+                  </div>
+                  <p className="text-xs text-text-muted mt-0.5">
+                    {daysCount} shoot {daysCount === 1 ? "day" : "days"}
+                    {endDate && daysCount > 1 && ` · ${daysCount} ${daysCount === 1 ? "night" : "nights"}`}
+                  </p>
+                </div>
+              </div>
+              {canEdit && (
+                <div className="flex items-center gap-2 shrink-0">
+                  <input
+                    type="date"
+                    value={startDate}
+                    onChange={(e) => saveStartDate(e.target.value)}
+                    className="bg-bg-input border border-border text-text-primary text-sm rounded-lg px-3 py-1.5 cursor-pointer focus:outline-none focus:border-accent"
+                  />
+                  {startDate && (
+                    <button
+                      onClick={() => saveStartDate("")}
+                      className="text-text-muted hover:text-danger text-xs transition-colors"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+          );
+        }
+
+        return null;
+      })()}
+
       {/* Tabs */}
       <div className="border-b border-border mb-6 overflow-x-auto">
         <div className="flex gap-1 min-w-0">
@@ -262,9 +369,9 @@ export default function ProjectPage({ params }: { params: Promise<{ projectId: s
       </div>
 
       {/* Tab Content */}
-      {activeTab === "itinerary" && <ItineraryView projectId={projectId} canEdit={canEdit} />}
+      {activeTab === "itinerary" && <ItineraryView projectId={projectId} canEdit={canEdit} startDate={project.start_date ?? null} onDaysCountChange={setDaysCount} />}
       {activeTab === "references" && <ReferencesView projectId={projectId} canEdit={canEdit} />}
-      {activeTab === "shots" && <ShotListView projectId={projectId} canEdit={canEdit} />}
+      {activeTab === "shots" && <ShotListView projectId={projectId} canEdit={canEdit} currentUserId={currentUserId} />}
       {activeTab === "team" && <TeamView projectId={projectId} canEdit={canEdit} isOwner={project.role === "owner"} />}
     </div>
   );

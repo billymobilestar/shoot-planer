@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { Bell, Heart, MessageCircle, MapPin, Check, CheckCheck } from "lucide-react";
+import { Bell, Heart, MessageCircle, MapPin, Check, CheckCheck, CalendarDays } from "lucide-react";
 import { Notification, NotificationType } from "@/lib/types";
 
 const typeIcons: Record<NotificationType, typeof Heart> = {
@@ -10,6 +10,10 @@ const typeIcons: Record<NotificationType, typeof Heart> = {
   reference_comment: MessageCircle,
   location_comment: MessageCircle,
   location_added: MapPin,
+  location_updated: MapPin,
+  shot_status_changed: Check,
+  day_added: CalendarDays,
+  reference_location_assigned: MapPin,
 };
 
 const typeColors: Record<NotificationType, string> = {
@@ -17,6 +21,10 @@ const typeColors: Record<NotificationType, string> = {
   reference_comment: "text-accent",
   location_comment: "text-accent",
   location_added: "text-success",
+  location_updated: "text-yellow-400",
+  shot_status_changed: "text-purple-400",
+  day_added: "text-accent",
+  reference_location_assigned: "text-green-400",
 };
 
 function timeAgo(dateStr: string): string {

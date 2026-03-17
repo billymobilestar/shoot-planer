@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { Trash2, MapPin, ChevronDown, ChevronUp, Check, Upload, Image as ImageIcon, X } from "lucide-react";
+import { Trash2, MapPin, ChevronDown, ChevronUp, Check, Upload, Image as ImageIcon, X, Square, CheckSquare } from "lucide-react";
 import { Shot, Location, ShotStatus, ShootReference } from "@/lib/types";
+import ShotComments from "./ShotComments";
 
 const statusStyles: Record<ShotStatus, string> = {
   planned: "bg-warning/10 text-warning",
@@ -36,15 +37,20 @@ interface Props {
   references: ShootReference[];
   canEdit: boolean;
   projectId: string;
+  currentUserId: string;
   onUpdate: () => void;
+  onRequestDelete: () => void;
+  isSelected?: boolean;
+  onToggleSelect?: () => void;
 }
 
-export default function ShotCard({ shot, locations, references, canEdit, projectId, onUpdate }: Props) {
+export default function ShotCard({ shot, locations, references, canEdit, projectId, currentUserId, onUpdate, onRequestDelete, isSelected, onToggleSelect }: Props) {
   const [expanded, setExpanded] = useState(!canEdit);
   const [statusOpen, setStatusOpen] = useState(false);
   const [showImagePicker, setShowImagePicker] = useState(false);
   const [editImageUrl, setEditImageUrl] = useState(shot.image_url || "");
   const [uploadingImage, setUploadingImage] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const statusRef = useRef<HTMLDivElement>(null);
   const [form, setForm] = useState({
     title: shot.title,
@@ -116,14 +122,28 @@ export default function ShotCard({ shot, locations, references, canEdit, project
   }
 
   return (
-    <div className="bg-bg-card border border-border rounded-xl overflow-hidden hover:border-border-light transition-colors">
+    <div className={`bg-bg-card border rounded-xl overflow-hidden hover:border-border-light transition-colors relative ${isSelected ? "border-accent ring-1 ring-accent" : "border-border"}`}>
+      {/* Bulk select checkbox */}
+      {onToggleSelect && (
+        <button
+          onClick={onToggleSelect}
+          className="absolute top-2 left-2 z-10 text-text-muted hover:text-accent transition-colors bg-bg-card/80 rounded p-0.5"
+        >
+          {isSelected ? (
+            <CheckSquare className="w-4 h-4 text-accent" />
+          ) : (
+            <Square className="w-4 h-4" />
+          )}
+        </button>
+      )}
+
       {shot.image_url && (
         <img src={shot.image_url} alt={shot.title} className="w-full h-52 object-cover" />
       )}
 
       <div className="p-4">
         <div className="flex items-start justify-between mb-2">
-          <h4 className="font-semibold text-text-primary">{shot.title}</h4>
+          <h4 className={`font-semibold text-text-primary ${onToggleSelect ? "pl-5" : ""}`}>{shot.title}</h4>
           {canEdit && (
             <button onClick={() => setExpanded(!expanded)} className="text-text-muted hover:text-text-primary ml-2 shrink-0">
               {expanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
@@ -146,10 +166,7 @@ export default function ShotCard({ shot, locations, references, canEdit, project
                   {(Object.keys(statusLabels) as ShotStatus[]).map((s) => (
                     <button
                       key={s}
-                      onClick={() => {
-                        quickStatusChange(s);
-                        setStatusOpen(false);
-                      }}
+                      onClick={() => { quickStatusChange(s); setStatusOpen(false); }}
                       className={`w-full text-left px-3 py-1.5 text-sm flex items-center gap-2 hover:bg-bg-card-hover transition-colors ${form.status === s ? "text-accent font-medium" : "text-text-secondary"}`}
                     >
                       <span className={`w-2 h-2 rounded-full ${statusDots[s]}`} />
@@ -179,7 +196,7 @@ export default function ShotCard({ shot, locations, references, canEdit, project
         )}
 
         {assignedLocation && (
-          <div className="flex items-center gap-1.5 text-sm text-accent">
+          <div className="flex items-center gap-1.5 text-sm text-accent mb-2">
             <MapPin className="w-3.5 h-3.5" />
             {assignedLocation.name}
           </div>
@@ -317,16 +334,29 @@ export default function ShotCard({ shot, locations, references, canEdit, project
               rows={2}
               className="w-full bg-bg-input border border-border rounded-lg px-3 py-2 text-text-primary text-sm focus:outline-none focus:border-accent resize-none"
             />
-            <div className="flex gap-2">
+            <div className="flex gap-2 items-center">
               <button onClick={save} className="bg-accent hover:bg-accent-hover text-white rounded-lg px-4 py-2 text-sm font-medium transition-colors">
                 Save
               </button>
-              <button onClick={deleteShot} className="text-danger hover:text-danger-hover ml-auto">
-                <Trash2 className="w-4 h-4" />
-              </button>
+              <div className="ml-auto">
+                {confirmDelete ? (
+                  <div className="flex items-center gap-2 text-sm">
+                    <span className="text-text-secondary">Delete?</span>
+                    <button onClick={onRequestDelete} className="text-danger hover:text-danger-hover font-medium">Yes</button>
+                    <button onClick={() => setConfirmDelete(false)} className="text-text-secondary">No</button>
+                  </div>
+                ) : (
+                  <button onClick={() => setConfirmDelete(true)} className="text-text-muted hover:text-danger transition-colors">
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
             </div>
           </div>
         )}
+
+        {/* Comments — visible to all project members */}
+        <ShotComments projectId={projectId} shotId={shot.id} currentUserId={currentUserId} />
       </div>
     </div>
   );

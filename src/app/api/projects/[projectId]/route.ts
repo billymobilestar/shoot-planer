@@ -47,7 +47,19 @@ export async function GET(request: Request, { params }: { params: Promise<{ proj
         .select("*")
         .eq("shoot_day_id", day.id)
         .order("position");
-      return { ...day, locations: locations || [] };
+
+      const locsWithScenes = await Promise.all(
+        (locations || []).map(async (loc) => {
+          const { data: scenes } = await supabase
+            .from("scenes")
+            .select("*")
+            .eq("location_id", loc.id)
+            .order("position");
+          return { ...loc, scenes: scenes || [] };
+        })
+      );
+
+      return { ...day, locations: locsWithScenes };
     })
   );
 
@@ -86,6 +98,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ pr
   if (body.name !== undefined) updates.name = body.name;
   if (body.description !== undefined) updates.description = body.description;
   if (body.cover_image_url !== undefined) updates.cover_image_url = body.cover_image_url;
+  if (body.start_date !== undefined) updates.start_date = body.start_date;
 
   const { data, error } = await supabase
     .from("projects")

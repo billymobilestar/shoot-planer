@@ -1,6 +1,8 @@
-import { auth } from "@clerk/nextjs/server";
+import { auth, currentUser } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabase";
+import { getDisplayName } from "@/lib/utils";
+import { createNotifications } from "@/lib/notifications";
 
 export async function GET(request: Request, { params }: { params: Promise<{ projectId: string }> }) {
   const { userId } = await auth();
@@ -22,7 +24,19 @@ export async function GET(request: Request, { params }: { params: Promise<{ proj
         .select("*")
         .eq("shoot_day_id", day.id)
         .order("position");
-      return { ...day, locations: locations || [] };
+
+      const locsWithScenes = await Promise.all(
+        (locations || []).map(async (loc) => {
+          const { data: scenes } = await supabase
+            .from("scenes")
+            .select("*")
+            .eq("location_id", loc.id)
+            .order("position");
+          return { ...loc, scenes: scenes || [] };
+        })
+      );
+
+      return { ...day, locations: locsWithScenes };
     })
   );
 
@@ -33,6 +47,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ pro
   const { userId } = await auth();
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
+  const user = await currentUser();
   const { projectId } = await params;
   const body = await request.json();
   const supabase = getSupabaseAdmin();
@@ -59,5 +74,18 @@ export async function POST(request: Request, { params }: { params: Promise<{ pro
     .single();
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+  const actorName = getDisplayName(user);
+  await createNotifications({
+    projectId,
+    actorUserId: userId,
+    actorName,
+    type: "day_added",
+    title: `${actorName} added Day ${nextDayNumber}`,
+    body: data.title !== `Day ${nextDayNumber}` ? data.title : null,
+    resourceId: data.id,
+    deepLink: `/project/${projectId}?tab=itinerary`,
+  });
+
   return NextResponse.json(data, { status: 201 });
 }

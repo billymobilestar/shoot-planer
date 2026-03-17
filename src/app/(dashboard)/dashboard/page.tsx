@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Plus, FolderOpen, Zap, Crown, Users } from "lucide-react";
+import { Plus, FolderOpen, Zap, Crown, Users, Copy } from "lucide-react";
 import { Project } from "@/lib/types";
 import { formatDate } from "@/lib/utils";
 import CreateProjectModal from "@/components/CreateProjectModal";
@@ -13,33 +13,39 @@ interface SubInfo {
   status: string;
 }
 
-function ProjectCard({ project, onClick }: { project: Project; onClick: () => void }) {
+function ProjectCard({ project, onClick, onDuplicate }: { project: Project; onClick: () => void; onDuplicate: () => void }) {
   return (
-    <button
-      onClick={onClick}
-      className="bg-bg-card border border-border rounded-xl overflow-hidden hover:border-border-light hover:bg-bg-card-hover transition-colors text-left group"
-    >
-      {project.cover_image_url ? (
-        <div className="h-32 overflow-hidden">
-          <img
-            src={project.cover_image_url}
-            alt={project.name}
-            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-          />
-        </div>
-      ) : (
-        <div className="h-20 bg-linear-to-br from-accent/10 via-bg-card to-bg-primary" />
-      )}
-      <div className="p-5">
-        <h3 className="text-lg font-semibold text-text-primary group-hover:text-accent transition-colors mb-1">
-          {project.name}
-        </h3>
-        {project.description && (
-          <p className="text-text-secondary text-sm line-clamp-2 mb-3">{project.description}</p>
+    <div className="relative group bg-bg-card border border-border rounded-xl overflow-hidden hover:border-border-light hover:bg-bg-card-hover transition-colors text-left">
+      <button onClick={onClick} className="w-full text-left">
+        {project.cover_image_url ? (
+          <div className="h-32 overflow-hidden">
+            <img
+              src={project.cover_image_url}
+              alt={project.name}
+              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+            />
+          </div>
+        ) : (
+          <div className="h-20 bg-linear-to-br from-accent/10 via-bg-card to-bg-primary" />
         )}
-        <p className="text-text-muted text-xs">Created {formatDate(project.created_at)}</p>
-      </div>
-    </button>
+        <div className="p-5">
+          <h3 className="text-lg font-semibold text-text-primary group-hover:text-accent transition-colors mb-1">
+            {project.name}
+          </h3>
+          {project.description && (
+            <p className="text-text-secondary text-sm line-clamp-2 mb-3">{project.description}</p>
+          )}
+          <p className="text-text-muted text-xs">Created {formatDate(project.created_at)}</p>
+        </div>
+      </button>
+      <button
+        onClick={(e) => { e.stopPropagation(); onDuplicate(); }}
+        title="Duplicate project"
+        className="absolute top-2 right-2 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity bg-bg-card/90 hover:bg-bg-card border border-border rounded-lg p-1.5 text-text-muted hover:text-text-primary"
+      >
+        <Copy className="w-3.5 h-3.5" />
+      </button>
+    </div>
   );
 }
 
@@ -74,6 +80,11 @@ export default function DashboardPage() {
 
   const isPro = sub.plan === "pro" && sub.status !== "past_due";
   const atLimit = !isPro && ownedProjects.length >= 1;
+
+  async function handleDuplicate(projectId: string) {
+    const res = await fetch(`/api/projects/${projectId}/duplicate`, { method: "POST" });
+    if (res.ok) fetchProjects();
+  }
 
   function handleNewProject() {
     if (atLimit) {
@@ -155,7 +166,7 @@ export default function DashboardPage() {
           {ownedProjects.length > 0 && (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
               {ownedProjects.map((project) => (
-                <ProjectCard key={project.id} project={project} onClick={() => router.push(`/project/${project.id}`)} />
+                <ProjectCard key={project.id} project={project} onClick={() => router.push(`/project/${project.id}`)} onDuplicate={() => handleDuplicate(project.id)} />
               ))}
             </div>
           )}
@@ -170,7 +181,7 @@ export default function DashboardPage() {
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                 {collabProjects.map((project) => (
-                  <ProjectCard key={project.id} project={project} onClick={() => router.push(`/project/${project.id}`)} />
+                  <ProjectCard key={project.id} project={project} onClick={() => router.push(`/project/${project.id}`)} onDuplicate={() => handleDuplicate(project.id)} />
                 ))}
               </div>
             </div>

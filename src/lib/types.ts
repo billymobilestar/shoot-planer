@@ -4,6 +4,7 @@ export interface Project {
   description: string | null;
   owner_id: string;
   cover_image_url: string | null;
+  start_date: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -43,6 +44,27 @@ export interface Location {
   drive_distance_from_previous: string | null;
   position: number;
   notes: string | null;
+  scene_text: string | null;
+  scene_file_url: string | null;
+  scene_file_name: string | null;
+  prep_minutes: number;
+  shoot_minutes: number;
+  wrap_minutes: number;
+  break_after_minutes: number;
+  created_at: string;
+  scenes?: Scene[];
+}
+
+export interface Scene {
+  id: string;
+  location_id: string;
+  project_id: string;
+  title: string | null;
+  scene_text: string | null;
+  scene_file_url: string | null;
+  scene_file_name: string | null;
+  duration_minutes: number;
+  position: number;
   created_at: string;
 }
 
@@ -139,11 +161,24 @@ export interface ReferenceComment {
   created_at: string;
 }
 
+export interface ShotComment {
+  id: string;
+  shot_id: string;
+  user_id: string;
+  user_name: string | null;
+  content: string;
+  created_at: string;
+}
+
 export type NotificationType =
   | "reference_reaction"
   | "reference_comment"
   | "location_comment"
-  | "location_added";
+  | "location_added"
+  | "location_updated"
+  | "shot_status_changed"
+  | "day_added"
+  | "reference_location_assigned";
 
 export interface Notification {
   id: string;

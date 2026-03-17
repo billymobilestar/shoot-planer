@@ -1,6 +1,8 @@
-import { auth } from "@clerk/nextjs/server";
+import { auth, currentUser } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabase";
+import { getDisplayName } from "@/lib/utils";
+import { createNotifications } from "@/lib/notifications";
 
 export async function PATCH(
   request: Request,
@@ -9,7 +11,8 @@ export async function PATCH(
   const { userId } = await auth();
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const { refId } = await params;
+  const user = await currentUser();
+  const { projectId, refId } = await params;
   const body = await request.json();
   const supabase = getSupabaseAdmin();
 
@@ -37,6 +40,27 @@ export async function PATCH(
     .single();
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+  // Notify when a location is assigned to a reference
+  const isLocationAssignment = body.location_ids !== undefined || body.location_id !== undefined;
+  const hasLocation = (body.location_ids?.length > 0) || (body.location_id != null);
+  if (isLocationAssignment && hasLocation && data) {
+    // Look up location name
+    const locationId = body.location_ids?.[0] ?? body.location_id;
+    const { data: loc } = await supabase.from("locations").select("name").eq("id", locationId).single();
+    const actorName = getDisplayName(user);
+    await createNotifications({
+      projectId,
+      actorUserId: userId,
+      actorName,
+      type: "reference_location_assigned",
+      title: `${actorName} assigned a reference to ${loc?.name || "a location"}`,
+      body: data.title || null,
+      resourceId: refId,
+      deepLink: `/project/${projectId}?tab=references&ref=${refId}`,
+    });
+  }
+
   return NextResponse.json(data);
 }
 

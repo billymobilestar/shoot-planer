@@ -5,6 +5,7 @@ import {
   DndContext,
   closestCenter,
   PointerSensor,
+  TouchSensor,
   useSensor,
   useSensors,
   DragEndEvent,
@@ -17,20 +18,25 @@ import { ShootDayWithLocations, Location } from "@/lib/types";
 import { generateGoogleMapsUrl } from "@/lib/utils";
 import DayColumn from "./DayColumn";
 import DriveConnector from "./DriveConnector";
+import UndoToast from "@/components/ui/UndoToast";
 import LocationCard from "./LocationCard";
 
 interface Props {
   projectId: string;
   canEdit: boolean;
+  startDate?: string | null;
+  onDaysCountChange?: (count: number) => void;
 }
 
-export default function ItineraryView({ projectId, canEdit }: Props) {
+export default function ItineraryView({ projectId, canEdit, startDate, onDaysCountChange }: Props) {
   const [days, setDays] = useState<ShootDayWithLocations[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeLocation, setActiveLocation] = useState<Location | null>(null);
+  const [pendingDayDelete, setPendingDayDelete] = useState<{ id: string; label: string } | null>(null);
 
   const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 8 } })
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 250, tolerance: 5 } })
   );
 
   const fetchDays = useCallback(async () => {
@@ -38,9 +44,10 @@ export default function ItineraryView({ projectId, canEdit }: Props) {
     if (res.ok) {
       const data = await res.json();
       setDays(data);
+      onDaysCountChange?.(data.length);
     }
     setLoading(false);
-  }, [projectId]);
+  }, [projectId, onDaysCountChange]);
 
   useEffect(() => {
     fetchDays();
@@ -52,6 +59,25 @@ export default function ItineraryView({ projectId, canEdit }: Props) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({}),
     });
+    fetchDays();
+  }
+
+  function requestDayDelete(id: string, label: string) {
+    if (pendingDayDelete) {
+      fetch(`/api/projects/${projectId}/days/${pendingDayDelete.id}`, { method: "DELETE" }).then(fetchDays);
+    }
+    setPendingDayDelete({ id, label });
+  }
+
+  function undoDayDelete() {
+    setPendingDayDelete(null);
+  }
+
+  async function commitDayDelete() {
+    if (!pendingDayDelete) return;
+    const id = pendingDayDelete.id;
+    setPendingDayDelete(null);
+    await fetch(`/api/projects/${projectId}/days/${id}`, { method: "DELETE" });
     fetchDays();
   }
 
@@ -230,8 +256,8 @@ export default function ItineraryView({ projectId, canEdit }: Props) {
         onDragEnd={handleDragEnd}
       >
         <div className="space-y-0">
-          {days.map((day, dayIdx) => {
-            const prevDay = dayIdx > 0 ? days[dayIdx - 1] : null;
+          {days.filter((d) => d.id !== pendingDayDelete?.id).map((day, dayIdx, visibleDays) => {
+            const prevDay = dayIdx > 0 ? visibleDays[dayIdx - 1] : null;
             const prevLastLoc = prevDay?.locations?.[prevDay.locations.length - 1];
             const currFirstLoc = day.locations?.[0];
 
@@ -255,6 +281,12 @@ export default function ItineraryView({ projectId, canEdit }: Props) {
                   canEdit={canEdit}
                   projectId={projectId}
                   onUpdate={fetchDays}
+                  onRequestDeleteDay={canEdit ? () => requestDayDelete(day.id, day.title || `Day ${day.day_number}`) : undefined}
+                  dayDate={startDate ? (() => {
+                    const d = new Date(startDate + "T00:00:00");
+                    d.setDate(d.getDate() + day.day_number - 1);
+                    return d.toISOString().slice(0, 10);
+                  })() : null}
                 />
               </div>
             );
@@ -284,6 +316,15 @@ export default function ItineraryView({ projectId, canEdit }: Props) {
           <Plus className="w-5 h-5" />
           Add Day
         </button>
+      )}
+
+      {pendingDayDelete && (
+        <UndoToast
+          key={pendingDayDelete.id}
+          message={`"${pendingDayDelete.label}" deleted`}
+          onUndo={undoDayDelete}
+          onCommit={commitDayDelete}
+        />
       )}
     </div>
   );
