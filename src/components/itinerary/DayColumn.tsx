@@ -5,6 +5,7 @@ import { useDroppable } from "@dnd-kit/core";
 import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { Plus, Trash2, Pencil, Check, X, MapPin, Clock, AlertTriangle, Coffee, ChevronDown, ChevronUp, FilmIcon, Car } from "lucide-react";
 import { ShootDayWithLocations, Location } from "@/lib/types";
+import { useTracking } from "@/components/tracking/TrackingProvider";
 import LocationCard from "./LocationCard";
 import DriveConnector from "./DriveConnector";
 import AddLocationModal from "./AddLocationModal";
@@ -45,6 +46,7 @@ export default function DayColumn({ day, canEdit, projectId, onUpdate, onRequest
   const [insertAtPosition, setInsertAtPosition] = useState<number | null>(null);
   const [deletedLocation, setDeletedLocation] = useState<{ location: Location; name: string } | null>(null);
 
+  const { getDistanceTo } = useTracking();
   const { setNodeRef, isOver } = useDroppable({ id: day.id });
 
   async function saveTitle() {
@@ -273,6 +275,7 @@ export default function DayColumn({ day, canEdit, projectId, onUpdate, onRequest
                   projectId={projectId}
                   onUpdate={onUpdate}
                   onRequestDelete={canEdit ? () => requestLocationDelete(location.id, location.name) : undefined}
+                  distanceMeters={getDistanceTo(location.latitude, location.longitude)}
                 />
                 {(location.break_after_minutes || 0) > 0 && (
                   <div className="flex items-center justify-center gap-2 py-2 text-xs text-text-muted">

@@ -13,9 +13,11 @@ import {
   DragOverlay,
   DragStartEvent,
 } from "@dnd-kit/core";
-import { Plus, CalendarDays, MapPin, Route, Clock, List, Calendar, FilmIcon, Car } from "lucide-react";
+import { Plus, CalendarDays, MapPin, Route, Clock, List, Calendar, FilmIcon, Car, Navigation, Loader2 } from "lucide-react";
 import { ShootDayWithLocations, Location } from "@/lib/types";
 import { generateGoogleMapsUrl } from "@/lib/utils";
+import { useTracking } from "@/components/tracking/TrackingProvider";
+import TrackingBanner from "@/components/tracking/TrackingBanner";
 import DayColumn from "./DayColumn";
 import DriveConnector from "./DriveConnector";
 import DeleteDayModal from "./DeleteDayModal";
@@ -58,6 +60,24 @@ export default function ItineraryView({ projectId, canEdit, startDate, onDaysCou
   const [deletedDay, setDeletedDay] = useState<{ day: ShootDayWithLocations; label: string } | null>(null);
   const [dayToDelete, setDayToDelete] = useState<ShootDayWithLocations | null>(null);
   const [insertAfterDay, setInsertAfterDay] = useState<number | null>(null);
+
+  const { active: trackingActive, start: startTracking, stop: stopTracking, setLocations: setTrackingLocations, loading: trackingLoading } = useTracking();
+
+  // Feed all locations into the tracking context whenever days change
+  useEffect(() => {
+    const allLocs = days.flatMap((d) => d.locations);
+    setTrackingLocations(allLocs);
+  }, [days, setTrackingLocations]);
+
+  // Mark a location as completed (from arrival banner)
+  async function markLocationCompleted(locationId: string) {
+    await fetch(`/api/projects/${projectId}/locations/${locationId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ completed: true }),
+    });
+    fetchDays();
+  }
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
@@ -355,6 +375,26 @@ export default function ItineraryView({ projectId, canEdit, startDate, onDaysCou
           </div>
         )}
         {totalLocations > 0 && (
+          <button
+            onClick={() => {
+              if (trackingActive) stopTracking();
+              else startTracking();
+            }}
+            className={`flex items-center gap-2 text-sm rounded-lg px-3 py-2 transition-colors ${
+              trackingActive
+                ? "bg-success hover:bg-success/80 text-white"
+                : "bg-bg-primary border border-border text-text-secondary hover:text-text-primary hover:border-accent"
+            }`}
+          >
+            {trackingLoading ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <Navigation className={`w-4 h-4 ${trackingActive ? "animate-pulse" : ""}`} />
+            )}
+            {trackingActive ? "Tracking" : "Track Location"}
+          </button>
+        )}
+        {totalLocations > 0 && (
           <a
             href={mapsUrl}
             target="_blank"
@@ -367,6 +407,9 @@ export default function ItineraryView({ projectId, canEdit, startDate, onDaysCou
           </a>
         )}
       </div>
+
+      {/* Tracking Banner */}
+      <TrackingBanner projectId={projectId} onMarkCompleted={markLocationCompleted} />
 
       {/* Calendar View */}
       {viewMode === "calendar" && startDate && (

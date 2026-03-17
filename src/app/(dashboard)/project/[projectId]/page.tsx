@@ -10,6 +10,7 @@ import ReferencesView from "@/components/references/ReferencesView";
 import ShotListView from "@/components/shots/ShotListView";
 import TeamView from "@/components/team/TeamView";
 import ChatBox from "@/components/chat/ChatBox";
+import { TrackingProvider } from "@/components/tracking/TrackingProvider";
 
 interface ProjectData extends Project {
   role: "owner" | "admin" | "viewer";
@@ -153,6 +154,7 @@ export default function ProjectPage({ params }: { params: Promise<{ projectId: s
   if (!project) return null;
 
   return (
+    <TrackingProvider>
     <div className="max-w-7xl mx-auto px-6 py-6">
       {/* Back button */}
       <div className="flex items-center justify-between mb-4">
@@ -397,5 +399,6 @@ export default function ProjectPage({ params }: { params: Promise<{ projectId: s
 
       <ChatBox projectId={projectId} />
     </div>
+    </TrackingProvider>
   );
 }

@@ -34,6 +34,7 @@ interface Props {
   onUpdate: () => void;
   onRequestDelete?: () => void;
   isDragOverlay?: boolean;
+  distanceMeters?: number | null;
 }
 
 function TimingInput({
@@ -72,7 +73,12 @@ function TimingInput({
   );
 }
 
-export default function LocationCard({ location, canEdit, projectId, onUpdate, onRequestDelete, isDragOverlay }: Props) {
+function formatDist(meters: number): string {
+  if (meters < 1000) return `${Math.round(meters)}m`;
+  return `${(meters / 1000).toFixed(1)}km`;
+}
+
+export default function LocationCard({ location, canEdit, projectId, onUpdate, onRequestDelete, isDragOverlay, distanceMeters }: Props) {
   const [expanded, setExpanded] = useState(!canEdit);
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState({
@@ -254,6 +260,11 @@ export default function LocationCard({ location, canEdit, projectId, onUpdate, o
                   <Clock className="w-3.5 h-3.5" />No duration set
                 </span>
               )}
+              {distanceMeters != null && (
+                <span className={`inline-flex items-center gap-1.5 text-xs font-bold backdrop-blur-sm rounded-full px-2.5 py-1 ${distanceMeters <= 150 ? "text-green-200 bg-green-500/30" : "text-white bg-white/20"}`}>
+                  <Navigation className="w-3.5 h-3.5" />{distanceMeters <= 150 ? "Here!" : formatDist(distanceMeters)}
+                </span>
+              )}
             </div>
           </div>
         </div>
@@ -301,6 +312,11 @@ export default function LocationCard({ location, canEdit, projectId, onUpdate, o
               ) : (
                 <span className="inline-flex items-center gap-1.5 text-xs text-warning/80 bg-warning/10 rounded-full px-2.5 py-1">
                   <Clock className="w-3.5 h-3.5" />No duration set
+                </span>
+              )}
+              {distanceMeters != null && (
+                <span className={`inline-flex items-center gap-1.5 text-xs font-bold rounded-full px-2.5 py-1 ${distanceMeters <= 150 ? "text-success bg-success/10" : "text-accent bg-accent/10"}`}>
+                  <Navigation className="w-3.5 h-3.5" />{distanceMeters <= 150 ? "Here!" : formatDist(distanceMeters)}
                 </span>
               )}
             </div>
