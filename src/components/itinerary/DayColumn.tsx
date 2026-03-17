@@ -116,6 +116,12 @@ export default function DayColumn({ day, canEdit, projectId, onUpdate, onRequest
   const isOT = totalMinutes > 720;
   const displayDate = dayDate || day.date;
 
+  // Progress
+  const locCount = day.locations.length;
+  const completedCount = day.locations.filter((l) => l.completed).length;
+  const progressPct = locCount > 0 ? Math.round((completedCount / locCount) * 100) : 0;
+  const dayComplete = locCount > 0 && completedCount === locCount;
+
   return (
     <div
       ref={setNodeRef}
@@ -129,9 +135,9 @@ export default function DayColumn({ day, canEdit, projectId, onUpdate, onRequest
         onClick={() => !editingTitle && setExpanded((v) => !v)}
       >
         <div className="flex items-center gap-4">
-          <div className="w-12 h-12 rounded-xl bg-accent-muted flex flex-col items-center justify-center shrink-0">
-            <span className="text-accent font-bold text-lg leading-none">{day.day_number}</span>
-            <span className="text-accent/60 text-[10px] uppercase tracking-wider">Day</span>
+          <div className={`w-12 h-12 rounded-xl flex flex-col items-center justify-center shrink-0 ${dayComplete ? "bg-success/10" : "bg-accent-muted"}`}>
+            <span className={`font-bold text-lg leading-none ${dayComplete ? "text-success" : "text-accent"}`}>{day.day_number}</span>
+            <span className={`text-[10px] uppercase tracking-wider ${dayComplete ? "text-success/60" : "text-accent/60"}`}>Day</span>
           </div>
           {editingTitle ? (
             <div className="flex items-center gap-2">
@@ -214,6 +220,21 @@ export default function DayColumn({ day, canEdit, projectId, onUpdate, onRequest
           </button>
         </div>
       </div>
+
+      {/* Progress bar */}
+      {locCount > 0 && (
+        <div className="px-5 py-2 flex items-center gap-3 border-t border-border bg-bg-card">
+          <div className="flex-1 h-1.5 bg-border rounded-full overflow-hidden">
+            <div
+              className={`h-full rounded-full transition-all duration-500 ${dayComplete ? "bg-success" : "bg-accent"}`}
+              style={{ width: `${progressPct}%` }}
+            />
+          </div>
+          <span className={`text-xs font-medium shrink-0 ${dayComplete ? "text-success" : "text-text-muted"}`}>
+            {completedCount}/{locCount}
+          </span>
+        </div>
+      )}
 
       {/* Locations */}
       {expanded && <div className="p-4">

@@ -51,6 +51,7 @@ export interface Location {
   shoot_minutes: number;
   wrap_minutes: number;
   break_after_minutes: number;
+  completed: boolean;
   created_at: string;
   scenes?: Scene[];
 }

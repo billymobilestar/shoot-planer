@@ -46,6 +46,7 @@ export default function ProjectPage({ params }: { params: Promise<{ projectId: s
   const [nameValue, setNameValue] = useState("");
   const [uploadingCover, setUploadingCover] = useState(false);
   const [daysCount, setDaysCount] = useState(0);
+  const [progress, setProgress] = useState({ completed: 0, total: 0 });
   const coverInputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
 
@@ -348,6 +349,25 @@ export default function ProjectPage({ params }: { params: Promise<{ projectId: s
         return null;
       })()}
 
+      {/* Overall Progress */}
+      {progress.total > 0 && (
+        <div className="mb-4 rounded-xl border border-border bg-bg-card p-4">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-sm font-medium text-text-primary">Shoot Progress</span>
+            <span className={`text-sm font-semibold ${progress.completed === progress.total ? "text-success" : "text-text-secondary"}`}>
+              {progress.completed}/{progress.total} locations
+              {progress.total > 0 && ` · ${Math.round((progress.completed / progress.total) * 100)}%`}
+            </span>
+          </div>
+          <div className="h-2 bg-border rounded-full overflow-hidden">
+            <div
+              className={`h-full rounded-full transition-all duration-500 ${progress.completed === progress.total ? "bg-success" : "bg-accent"}`}
+              style={{ width: `${progress.total > 0 ? (progress.completed / progress.total) * 100 : 0}%` }}
+            />
+          </div>
+        </div>
+      )}
+
       {/* Tabs */}
       <div className="border-b border-border mb-6 overflow-x-auto">
         <div className="flex gap-1 min-w-0">
@@ -370,7 +390,7 @@ export default function ProjectPage({ params }: { params: Promise<{ projectId: s
       </div>
 
       {/* Tab Content */}
-      {activeTab === "itinerary" && <ItineraryView projectId={projectId} canEdit={canEdit} startDate={project.start_date ?? null} onDaysCountChange={setDaysCount} />}
+      {activeTab === "itinerary" && <ItineraryView projectId={projectId} canEdit={canEdit} startDate={project.start_date ?? null} onDaysCountChange={setDaysCount} onProgressChange={(c, t) => setProgress({ completed: c, total: t })} />}
       {activeTab === "references" && <ReferencesView projectId={projectId} canEdit={canEdit} />}
       {activeTab === "shots" && <ShotListView projectId={projectId} canEdit={canEdit} currentUserId={currentUserId} />}
       {activeTab === "team" && <TeamView projectId={projectId} canEdit={canEdit} isOwner={project.role === "owner"} />}

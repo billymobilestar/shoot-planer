@@ -22,7 +22,7 @@ export async function PATCH(
     "photo_url", "drive_time_from_previous", "drive_distance_from_previous",
     "position", "shoot_day_id", "notes",
     "scene_text", "scene_file_url", "scene_file_name",
-    "prep_minutes", "shoot_minutes", "wrap_minutes", "break_after_minutes",
+    "prep_minutes", "shoot_minutes", "wrap_minutes", "break_after_minutes", "completed",
   ];
   for (const field of fields) {
     if (body[field] !== undefined) updates[field] = body[field];

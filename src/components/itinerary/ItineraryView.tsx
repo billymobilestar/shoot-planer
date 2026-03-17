@@ -46,9 +46,10 @@ interface Props {
   canEdit: boolean;
   startDate?: string | null;
   onDaysCountChange?: (count: number) => void;
+  onProgressChange?: (completed: number, total: number) => void;
 }
 
-export default function ItineraryView({ projectId, canEdit, startDate, onDaysCountChange }: Props) {
+export default function ItineraryView({ projectId, canEdit, startDate, onDaysCountChange, onProgressChange }: Props) {
   const [days, setDays] = useState<ShootDayWithLocations[]>([]);
   const [loading, setLoading] = useState(true);
   const [viewMode, setViewMode] = useState<"list" | "calendar">("list");
@@ -67,6 +68,8 @@ export default function ItineraryView({ projectId, canEdit, startDate, onDaysCou
       const data = await res.json();
       setDays(data);
       onDaysCountChange?.(data.length);
+      const allLocs = data.flatMap((d: { locations: { completed?: boolean }[] }) => d.locations);
+      onProgressChange?.(allLocs.filter((l: { completed?: boolean }) => l.completed).length, allLocs.length);
     }
     setLoading(false);
   }, [projectId, onDaysCountChange]);

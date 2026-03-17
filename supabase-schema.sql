@@ -65,6 +65,7 @@ create table locations (
   drive_distance_from_previous text, -- e.g. "120 mi"
   position integer not null default 0, -- order within day
   notes text,
+  completed boolean default false,
   created_at timestamptz default now()
 );
 

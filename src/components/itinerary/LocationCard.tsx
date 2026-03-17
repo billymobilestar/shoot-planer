@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { GripVertical, ChevronDown, ChevronUp, Trash2, Upload, MapPin, MessageSquare, Navigation, FilmIcon, Clock, Coffee, Pencil, ImageIcon, StickyNote, Link2 } from "lucide-react";
+import { GripVertical, ChevronDown, ChevronUp, Trash2, Upload, MapPin, MessageSquare, Navigation, FilmIcon, Clock, Coffee, Pencil, ImageIcon, StickyNote, Link2, CheckCircle2, Circle } from "lucide-react";
 import { Location } from "@/lib/types";
 import LocationNotes from "./LocationNotes";
 import LocationGallery from "./LocationGallery";
@@ -96,6 +96,7 @@ export default function LocationCard({ location, canEdit, projectId, onUpdate, o
   const [showScene, setShowScene] = useState(false);
   const [photoCount, setPhotoCount] = useState(0);
   const [linkCount, setLinkCount] = useState(0);
+  const [completed, setCompleted] = useState(location.completed || false);
 
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: location.id, disabled: !canEdit });
 
@@ -184,19 +185,42 @@ export default function LocationCard({ location, canEdit, projectId, onUpdate, o
     onUpdate();
   }
 
+  async function toggleCompleted() {
+    const next = !completed;
+    setCompleted(next);
+    await fetch(`/api/projects/${projectId}/locations/${location.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ completed: next }),
+    });
+    onUpdate();
+  }
+
   const mapsUrl = location.latitude && location.longitude
     ? `https://www.google.com/maps/search/?api=1&query=${location.latitude},${location.longitude}`
     : null;
 
   return (
     <>
-    <div ref={setNodeRef} style={style} data-id={location.id} className="bg-bg-card-hover border border-border rounded-xl overflow-hidden transition-all">
+    <div ref={setNodeRef} style={style} data-id={location.id} className={`bg-bg-card-hover border rounded-xl overflow-hidden transition-all ${completed ? "border-success/40" : "border-border"}`}>
 
       {/* Hero image */}
       {location.photo_url && (
         <div className="relative">
           <img src={location.photo_url} alt={location.name} className="w-full object-cover max-h-72" />
           <div className="absolute inset-0 bg-linear-to-t from-black/60 via-transparent to-transparent" />
+          {/* Completion toggle */}
+          <button
+            onClick={toggleCompleted}
+            className="absolute top-3 left-3 z-10 transition-transform hover:scale-110 active:scale-95"
+            title={completed ? "Mark incomplete" : "Mark complete"}
+          >
+            {completed ? (
+              <CheckCircle2 className="w-7 h-7 text-success drop-shadow-lg" />
+            ) : (
+              <Circle className="w-7 h-7 text-white/50 hover:text-white/80 drop-shadow-lg" />
+            )}
+          </button>
           <div className="absolute bottom-0 left-0 right-0 p-4">
             <div className="flex items-center gap-2">
               {canEdit && (
@@ -204,7 +228,7 @@ export default function LocationCard({ location, canEdit, projectId, onUpdate, o
                   <GripVertical className="w-4 h-4" />
                 </button>
               )}
-              <h4 className="font-semibold text-white text-lg">{location.name}</h4>
+              <h4 className={`font-semibold text-white text-lg ${completed ? "line-through opacity-70" : ""}`}>{location.name}</h4>
               {/* Inline badges next to name */}
               <div className="flex items-center gap-1.5 ml-1">
                 {badges.filter(b => b.count > 0).map(({ icon: Icon, label, count }) => (
@@ -238,17 +262,29 @@ export default function LocationCard({ location, canEdit, projectId, onUpdate, o
       {/* Header without image */}
       {!location.photo_url && (
         <div className="flex items-center gap-3 p-4 cursor-pointer select-none" onClick={() => setExpanded(!expanded)}>
+          {/* Completion toggle */}
+          <button
+            onClick={(e) => { e.stopPropagation(); toggleCompleted(); }}
+            className="shrink-0 transition-transform hover:scale-110 active:scale-95"
+            title={completed ? "Mark incomplete" : "Mark complete"}
+          >
+            {completed ? (
+              <CheckCircle2 className="w-6 h-6 text-success" />
+            ) : (
+              <Circle className="w-6 h-6 text-text-muted hover:text-text-secondary" />
+            )}
+          </button>
           {canEdit && (
             <button {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing text-text-muted hover:text-text-primary" onClick={(e) => e.stopPropagation()}>
               <GripVertical className="w-4 h-4" />
             </button>
           )}
-          <div className="w-10 h-10 rounded-lg bg-accent-muted flex items-center justify-center shrink-0">
-            <MapPin className="w-5 h-5 text-accent" />
+          <div className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 ${completed ? "bg-success/10" : "bg-accent-muted"}`}>
+            <MapPin className={`w-5 h-5 ${completed ? "text-success" : "text-accent"}`} />
           </div>
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
-              <h4 className="font-semibold text-text-primary truncate">{location.name}</h4>
+              <h4 className={`font-semibold truncate ${completed ? "text-text-muted line-through" : "text-text-primary"}`}>{location.name}</h4>
               {/* Inline badges next to name */}
               {badges.filter(b => b.count > 0).map(({ icon: Icon, label, count }) => (
                 <span key={label} className="inline-flex items-center gap-1 text-xs text-text-secondary bg-bg-card border border-border rounded-full px-2 py-0.5 font-medium shrink-0">
