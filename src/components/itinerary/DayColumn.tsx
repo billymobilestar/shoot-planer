@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useDroppable } from "@dnd-kit/core";
 import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
-import { Plus, Trash2, Pencil, Check, X, MapPin, Clock, AlertTriangle, Coffee, ChevronDown, ChevronUp } from "lucide-react";
+import { Plus, Trash2, Pencil, Check, X, MapPin, Clock, AlertTriangle, Coffee, ChevronDown, ChevronUp, FilmIcon, Car } from "lucide-react";
 import { ShootDayWithLocations, Location } from "@/lib/types";
 import LocationCard from "./LocationCard";
 import DriveConnector from "./DriveConnector";
@@ -43,7 +43,6 @@ export default function DayColumn({ day, canEdit, projectId, onUpdate, onRequest
   const [titleValue, setTitleValue] = useState(day.title || "");
   const [showAddLocation, setShowAddLocation] = useState(false);
   const [insertAtPosition, setInsertAtPosition] = useState<number | null>(null);
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deletedLocation, setDeletedLocation] = useState<{ location: Location; name: string } | null>(null);
 
   const { setNodeRef, isOver } = useDroppable({ id: day.id });
@@ -55,11 +54,6 @@ export default function DayColumn({ day, canEdit, projectId, onUpdate, onRequest
       body: JSON.stringify({ title: titleValue.trim() }),
     });
     setEditingTitle(false);
-    onUpdate();
-  }
-
-  async function deleteDay() {
-    await fetch(`/api/projects/${projectId}/days/${day.id}`, { method: "DELETE" });
     onUpdate();
   }
 
@@ -110,16 +104,15 @@ export default function DayColumn({ day, canEdit, projectId, onUpdate, onRequest
     setShowAddLocation(true);
   }
 
-  const totalMinutes = day.locations.reduce((sum, loc) => {
+  // Three-part duration: filming, driving, total
+  const filmingMinutes = day.locations.reduce((sum, loc) => {
     const sceneDuration = (loc.scenes || []).reduce((s, sc) => s + (sc.duration_minutes || 0), 0);
     const shootTime = sceneDuration > 0 ? sceneDuration : (loc.shoot_minutes || 0);
-    return sum
-      + (loc.prep_minutes || 0)
-      + shootTime
-      + (loc.wrap_minutes || 0)
-      + (loc.break_after_minutes || 0)
-      + parseDriveMinutes(loc.drive_time_from_previous);
+    return sum + (loc.prep_minutes || 0) + shootTime + (loc.wrap_minutes || 0);
   }, 0);
+  const drivingMinutes = day.locations.reduce((sum, loc) => sum + parseDriveMinutes(loc.drive_time_from_previous), 0);
+  const breakMinutes = day.locations.reduce((sum, loc) => sum + (loc.break_after_minutes || 0), 0);
+  const totalMinutes = filmingMinutes + drivingMinutes + breakMinutes;
   const isOT = totalMinutes > 720;
   const displayDate = dayDate || day.date;
 
@@ -170,6 +163,18 @@ export default function DayColumn({ day, canEdit, projectId, onUpdate, onRequest
                   <MapPin className="w-3 h-3" />
                   {day.locations.length} {day.locations.length === 1 ? "location" : "locations"}
                 </span>
+                {filmingMinutes > 0 && (
+                  <span className="text-text-muted text-sm flex items-center gap-1">
+                    <FilmIcon className="w-3 h-3" />
+                    {fmtMins(filmingMinutes)}
+                  </span>
+                )}
+                {drivingMinutes > 0 && (
+                  <span className="text-text-muted text-sm flex items-center gap-1">
+                    <Car className="w-3 h-3" />
+                    {fmtMins(drivingMinutes)}
+                  </span>
+                )}
                 {totalMinutes > 0 && (
                   <span className={`text-sm flex items-center gap-1 font-medium ${isOT ? "text-warning" : "text-text-muted"}`}>
                     <Clock className="w-3 h-3" />
@@ -196,20 +201,10 @@ export default function DayColumn({ day, canEdit, projectId, onUpdate, onRequest
         </div>
 
         <div className="flex items-center gap-2 shrink-0" onClick={(e) => e.stopPropagation()}>
-          {canEdit && (
-            <>
-              {showDeleteConfirm ? (
-                <div className="flex items-center gap-2 text-sm">
-                  <span className="text-text-secondary">Delete day?</span>
-                  <button onClick={onRequestDeleteDay ?? deleteDay} className="text-danger hover:text-danger-hover font-medium">Yes</button>
-                  <button onClick={() => setShowDeleteConfirm(false)} className="text-text-secondary">No</button>
-                </div>
-              ) : (
-                <button onClick={() => setShowDeleteConfirm(true)} className="text-text-muted hover:text-danger transition-colors">
-                  <Trash2 className="w-4 h-4" />
-                </button>
-              )}
-            </>
+          {canEdit && onRequestDeleteDay && (
+            <button onClick={onRequestDeleteDay} className="text-text-muted hover:text-danger transition-colors">
+              <Trash2 className="w-4 h-4" />
+            </button>
           )}
           <button
             onClick={(e) => { e.stopPropagation(); setExpanded((v) => !v); }}

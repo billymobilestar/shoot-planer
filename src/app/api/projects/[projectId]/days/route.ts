@@ -52,22 +52,45 @@ export async function POST(request: Request, { params }: { params: Promise<{ pro
   const body = await request.json();
   const supabase = getSupabaseAdmin();
 
-  // Get max day number
-  const { data: existing } = await supabase
-    .from("shoot_days")
-    .select("day_number")
-    .eq("project_id", projectId)
-    .order("day_number", { ascending: false })
-    .limit(1);
+  // If insert_after_day_number is provided, insert at that position and shift others
+  const insertAfter: number | undefined = body.insert_after_day_number;
 
-  const nextDayNumber = existing && existing.length > 0 ? existing[0].day_number + 1 : 1;
+  let dayNumber: number;
+
+  if (insertAfter !== undefined) {
+    // Shift all days after this position up by 1
+    const { data: toShift } = await supabase
+      .from("shoot_days")
+      .select("id, day_number")
+      .eq("project_id", projectId)
+      .gt("day_number", insertAfter)
+      .order("day_number", { ascending: false });
+
+    if (toShift && toShift.length > 0) {
+      // Update in descending order to avoid unique constraint conflicts
+      for (const d of toShift) {
+        await supabase.from("shoot_days").update({ day_number: d.day_number + 1 }).eq("id", d.id);
+      }
+    }
+    dayNumber = insertAfter + 1;
+  } else {
+    // Append at end
+    const { data: existing } = await supabase
+      .from("shoot_days")
+      .select("day_number")
+      .eq("project_id", projectId)
+      .order("day_number", { ascending: false })
+      .limit(1);
+
+    dayNumber = existing && existing.length > 0 ? existing[0].day_number + 1 : 1;
+  }
 
   const { data, error } = await supabase
     .from("shoot_days")
     .insert({
       project_id: projectId,
-      day_number: nextDayNumber,
-      title: body.title || `Day ${nextDayNumber}`,
+      day_number: dayNumber,
+      title: body.title || `Day ${dayNumber}`,
       date: body.date || null,
     })
     .select()
@@ -81,8 +104,8 @@ export async function POST(request: Request, { params }: { params: Promise<{ pro
     actorUserId: userId,
     actorName,
     type: "day_added",
-    title: `${actorName} added Day ${nextDayNumber}`,
-    body: data.title !== `Day ${nextDayNumber}` ? data.title : null,
+    title: `${actorName} added Day ${dayNumber}`,
+    body: data.title !== `Day ${dayNumber}` ? data.title : null,
     resourceId: data.id,
     deepLink: `/project/${projectId}?tab=itinerary`,
   });

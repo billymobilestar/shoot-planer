@@ -13,14 +13,33 @@ import {
   DragOverlay,
   DragStartEvent,
 } from "@dnd-kit/core";
-import { Plus, CalendarDays, MapPin, Route, Clock, List, Calendar } from "lucide-react";
+import { Plus, CalendarDays, MapPin, Route, Clock, List, Calendar, FilmIcon, Car } from "lucide-react";
 import { ShootDayWithLocations, Location } from "@/lib/types";
 import { generateGoogleMapsUrl } from "@/lib/utils";
 import DayColumn from "./DayColumn";
 import DriveConnector from "./DriveConnector";
+import DeleteDayModal from "./DeleteDayModal";
 import UndoToast from "@/components/ui/UndoToast";
 import LocationCard from "./LocationCard";
 import CalendarView from "./CalendarView";
+
+function parseDriveMinutes(t: string | null): number {
+  if (!t) return 0;
+  let mins = 0;
+  const h = t.match(/(\d+)\s*hour/);
+  const m = t.match(/(\d+)\s*min/);
+  if (h) mins += parseInt(h[1]) * 60;
+  if (m) mins += parseInt(m[1]);
+  return mins;
+}
+
+function fmtMins(mins: number): string {
+  const h = Math.floor(mins / 60);
+  const m = mins % 60;
+  if (h === 0) return `${m}m`;
+  if (m === 0) return `${h}h`;
+  return `${h}h ${m}m`;
+}
 
 interface Props {
   projectId: string;
@@ -35,6 +54,7 @@ export default function ItineraryView({ projectId, canEdit, startDate, onDaysCou
   const [viewMode, setViewMode] = useState<"list" | "calendar">("list");
   const [activeLocation, setActiveLocation] = useState<Location | null>(null);
   const [deletedDay, setDeletedDay] = useState<{ day: ShootDayWithLocations; label: string } | null>(null);
+  const [dayToDelete, setDayToDelete] = useState<ShootDayWithLocations | null>(null);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
@@ -64,15 +84,21 @@ export default function ItineraryView({ projectId, canEdit, startDate, onDaysCou
     fetchDays();
   }
 
-  async function requestDayDelete(dayId: string, label: string) {
-    // Cache the full day data for undo
-    const dayData = days.find((d) => d.id === dayId);
-    if (!dayData) return;
+  function openDeleteModal(day: ShootDayWithLocations) {
+    setDayToDelete(day);
+  }
 
-    // Delete immediately from server
+  async function handleDeleteAndShift(dayId: string, label: string, dayData: ShootDayWithLocations) {
+    setDayToDelete(null);
     await fetch(`/api/projects/${projectId}/days/${dayId}`, { method: "DELETE" });
     fetchDays();
     setDeletedDay({ day: dayData, label });
+  }
+
+  async function handleClearDay(dayId: string) {
+    setDayToDelete(null);
+    await fetch(`/api/projects/${projectId}/days/${dayId}?mode=clear`, { method: "DELETE" });
+    fetchDays();
   }
 
   async function undoDayDelete() {
@@ -80,11 +106,15 @@ export default function ItineraryView({ projectId, canEdit, startDate, onDaysCou
     const { day } = deletedDay;
     setDeletedDay(null);
 
-    // Re-create the day
+    // Re-create the day at its original position
     const res = await fetch(`/api/projects/${projectId}/days`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ title: day.title, date: day.date }),
+      body: JSON.stringify({
+        title: day.title,
+        date: day.date,
+        insert_after_day_number: day.day_number - 1,
+      }),
     });
     if (!res.ok) { fetchDays(); return; }
     const newDay = await res.json();
@@ -116,6 +146,15 @@ export default function ItineraryView({ projectId, canEdit, startDate, onDaysCou
 
   function dismissDayDelete() {
     setDeletedDay(null);
+  }
+
+  async function insertDayAfter(dayNumber: number) {
+    await fetch(`/api/projects/${projectId}/days`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ insert_after_day_number: dayNumber }),
+    });
+    fetchDays();
   }
 
   function handleDragStart(event: DragStartEvent) {
@@ -218,20 +257,15 @@ export default function ItineraryView({ projectId, canEdit, startDate, onDaysCou
   const totalLocations = allLocations.length;
   const mapsUrl = generateGoogleMapsUrl(allLocations);
 
-  // Calculate total travel time by parsing drive_time_from_previous strings
-  const totalTravelMinutes = allLocations.reduce((sum, loc) => {
-    const t = loc.drive_time_from_previous;
-    if (!t) return sum;
-    let mins = 0;
-    const hourMatch = t.match(/(\d+)\s*hour/);
-    const minMatch = t.match(/(\d+)\s*min/);
-    if (hourMatch) mins += parseInt(hourMatch[1]) * 60;
-    if (minMatch) mins += parseInt(minMatch[1]);
-    return sum + mins;
+  // Three-part duration calculations
+  const totalDrivingMinutes = allLocations.reduce((sum, loc) => sum + parseDriveMinutes(loc.drive_time_from_previous), 0);
+  const totalFilmingMinutes = allLocations.reduce((sum, loc) => {
+    const sceneDuration = (loc.scenes || []).reduce((s, sc) => s + (sc.duration_minutes || 0), 0);
+    const shootTime = sceneDuration > 0 ? sceneDuration : (loc.shoot_minutes || 0);
+    return sum + (loc.prep_minutes || 0) + shootTime + (loc.wrap_minutes || 0);
   }, 0);
-
-  const travelHours = Math.floor(totalTravelMinutes / 60);
-  const travelMins = totalTravelMinutes % 60;
+  const totalBreakMinutes = allLocations.reduce((sum, loc) => sum + (loc.break_after_minutes || 0), 0);
+  const grandTotalMinutes = totalFilmingMinutes + totalDrivingMinutes + totalBreakMinutes;
 
   if (loading) {
     return (
@@ -258,15 +292,33 @@ export default function ItineraryView({ projectId, canEdit, startDate, onDaysCou
           <span className="text-text-primary font-medium">{totalLocations}</span>
           <span className="text-text-secondary">locations</span>
         </div>
-        {totalTravelMinutes > 0 && (
+        {totalFilmingMinutes > 0 && (
+          <>
+            <div className="w-px h-4 bg-border" />
+            <div className="flex items-center gap-2 text-sm">
+              <FilmIcon className="w-4 h-4 text-accent" />
+              <span className="text-text-primary font-medium">{fmtMins(totalFilmingMinutes)}</span>
+              <span className="text-text-secondary">filming</span>
+            </div>
+          </>
+        )}
+        {totalDrivingMinutes > 0 && (
+          <>
+            <div className="w-px h-4 bg-border" />
+            <div className="flex items-center gap-2 text-sm">
+              <Car className="w-4 h-4 text-accent" />
+              <span className="text-text-primary font-medium">{fmtMins(totalDrivingMinutes)}</span>
+              <span className="text-text-secondary">driving</span>
+            </div>
+          </>
+        )}
+        {grandTotalMinutes > 0 && (
           <>
             <div className="w-px h-4 bg-border" />
             <div className="flex items-center gap-2 text-sm">
               <Clock className="w-4 h-4 text-accent" />
-              <span className="text-text-primary font-medium">
-                {travelHours > 0 ? `${travelHours}h ${travelMins}m` : `${travelMins}m`}
-              </span>
-              <span className="text-text-secondary">travel</span>
+              <span className="text-text-primary font-medium">{fmtMins(grandTotalMinutes)}</span>
+              <span className="text-text-secondary">total</span>
             </div>
           </>
         )}
@@ -325,25 +377,41 @@ export default function ItineraryView({ projectId, canEdit, startDate, onDaysCou
 
             return (
               <div key={day.id}>
-                {dayIdx > 0 && prevLastLoc && currFirstLoc && (
-                  <div className="py-3 flex flex-col items-center">
-                    <DriveConnector
-                      originLat={prevLastLoc.latitude}
-                      originLng={prevLastLoc.longitude}
-                      destLat={currFirstLoc.latitude}
-                      destLng={currFirstLoc.longitude}
-                    />
+                {dayIdx > 0 && (
+                  <div className="relative group/insert-day">
+                    {prevLastLoc && currFirstLoc ? (
+                      <div className="py-3 flex flex-col items-center">
+                        <DriveConnector
+                          originLat={prevLastLoc.latitude}
+                          originLng={prevLastLoc.longitude}
+                          destLat={currFirstLoc.latitude}
+                          destLng={currFirstLoc.longitude}
+                        />
+                      </div>
+                    ) : (
+                      <div className="h-6" />
+                    )}
+                    {/* Insert day between */}
+                    {canEdit && (
+                      <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 flex justify-center z-10 pointer-events-none">
+                        <button
+                          onClick={() => insertDayAfter(prevDay!.day_number)}
+                          className="pointer-events-auto flex items-center gap-1 px-3 py-1.5 rounded-full bg-accent/80 sm:bg-accent text-white text-xs font-medium opacity-60 sm:opacity-0 sm:group-hover/insert-day:opacity-100 hover:opacity-100 active:opacity-100 hover:bg-accent-hover active:bg-accent-hover transition-all shadow-md"
+                          title="Insert a new day here"
+                        >
+                          <Plus className="w-3.5 h-3.5" />
+                          <span className="hidden sm:inline">Insert Day</span>
+                        </button>
+                      </div>
+                    )}
                   </div>
-                )}
-                {dayIdx > 0 && !(prevLastLoc && currFirstLoc) && (
-                  <div className="h-6" />
                 )}
                 <DayColumn
                   day={day}
                   canEdit={canEdit}
                   projectId={projectId}
                   onUpdate={fetchDays}
-                  onRequestDeleteDay={canEdit ? () => requestDayDelete(day.id, day.title || `Day ${day.day_number}`) : undefined}
+                  onRequestDeleteDay={canEdit ? () => openDeleteModal(day) : undefined}
                   dayDate={startDate ? (() => {
                     const d = new Date(startDate + "T00:00:00");
                     d.setDate(d.getDate() + day.day_number - 1);
@@ -386,6 +454,16 @@ export default function ItineraryView({ projectId, canEdit, startDate, onDaysCou
           message={`"${deletedDay.label}" deleted`}
           onUndo={undoDayDelete}
           onDismiss={dismissDayDelete}
+        />
+      )}
+
+      {dayToDelete && (
+        <DeleteDayModal
+          day={dayToDelete}
+          totalDays={days.length}
+          onDeleteAndShift={() => handleDeleteAndShift(dayToDelete.id, dayToDelete.title || `Day ${dayToDelete.day_number}`, dayToDelete)}
+          onClearDay={() => handleClearDay(dayToDelete.id)}
+          onClose={() => setDayToDelete(null)}
         />
       )}
     </div>
