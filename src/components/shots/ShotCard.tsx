@@ -1,9 +1,162 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { Trash2, MapPin, ChevronDown, Check, Upload, Image as ImageIcon, X, Square, CheckSquare } from "lucide-react";
-import { Shot, Location, ShotStatus, ShootReference } from "@/lib/types";
+import { Trash2, MapPin, ChevronDown, Check, Upload, Image as ImageIcon, X, Square, CheckSquare, Film, Clock, FileText, Loader2 } from "lucide-react";
+import { Shot, Location, Scene, ShotStatus, ShootReference } from "@/lib/types";
+import { parseFountain, applyInlineFormatting } from "@/lib/fountain";
+import type { FountainElement } from "@/lib/fountain";
 import ShotComments from "./ShotComments";
+
+function FountainPreview({ text }: { text: string }) {
+  const elements = parseFountain(text);
+  function renderElement(el: FountainElement, idx: number) {
+    const inline = (t: string) => ({ __html: applyInlineFormatting(t) });
+    switch (el.type) {
+      case "scene_heading":
+        return <p key={idx} className="font-bold uppercase tracking-wide mt-6 mb-1 text-text-primary border-b border-border pb-1">{el.text}</p>;
+      case "action":
+        return <p key={idx} className="my-1 text-text-primary leading-relaxed" dangerouslySetInnerHTML={inline(el.text!)} />;
+      case "character":
+        return <p key={idx} className="mt-4 mb-0 font-semibold uppercase tracking-wider text-center text-text-primary">{el.text}</p>;
+      case "parenthetical":
+        return <p key={idx} className="italic text-center text-text-secondary text-sm my-0">{el.text}</p>;
+      case "dialogue":
+        return <p key={idx} className="text-center max-w-xs mx-auto my-0.5 text-text-primary leading-relaxed" dangerouslySetInnerHTML={inline(el.text!)} />;
+      case "transition":
+        return <p key={idx} className="text-right uppercase italic text-text-secondary mt-4 mb-1 text-sm">{el.text}</p>;
+      case "centered":
+        return <p key={idx} className="text-center my-2 text-text-primary" dangerouslySetInnerHTML={inline(el.text!)} />;
+      case "page_break":
+        return <hr key={idx} className="border-border my-4" />;
+      case "blank":
+        return <div key={idx} className="h-2" />;
+      default:
+        return null;
+    }
+  }
+  return <div className="font-mono text-sm leading-relaxed px-2">{elements.map((el, i) => renderElement(el, i))}</div>;
+}
+
+function fmtMins(mins: number): string {
+  const h = Math.floor(mins / 60);
+  const m = mins % 60;
+  if (h === 0) return `${m}m`;
+  if (m === 0) return `${h}h`;
+  return `${h}h ${m}m`;
+}
+
+function SceneViewerModal({ scene, onClose }: { scene: Scene; onClose: () => void }) {
+  const [docxHtml, setDocxHtml] = useState<string | null>(null);
+  const [loadingDocx, setLoadingDocx] = useState(false);
+
+  const fileName = scene.scene_file_name || "";
+  const isDocx = fileName.toLowerCase().endsWith(".docx") || fileName.toLowerCase().endsWith(".doc");
+  const isPdf = fileName.toLowerCase().endsWith(".pdf");
+  const hasContent = !!scene.scene_text || !!scene.scene_file_url;
+
+  useEffect(() => {
+    if (isDocx && scene.scene_file_url && !docxHtml) {
+      setLoadingDocx(true);
+      import("mammoth").then((mammoth) => {
+        fetch(scene.scene_file_url!)
+          .then((r) => r.arrayBuffer())
+          .then((buf) => mammoth.default.convertToHtml({ arrayBuffer: buf }))
+          .then((result) => setDocxHtml(result.value))
+          .catch(() => setDocxHtml("<p style='color:red'>Could not render document.</p>"))
+          .finally(() => setLoadingDocx(false));
+      });
+    }
+  }, [isDocx, scene.scene_file_url, docxHtml]);
+
+  // Close on Escape
+  useEffect(() => {
+    function handleKey(e: KeyboardEvent) {
+      if (e.key === "Escape") onClose();
+    }
+    document.addEventListener("keydown", handleKey);
+    return () => document.removeEventListener("keydown", handleKey);
+  }, [onClose]);
+
+  return (
+    <div
+      className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4"
+      onClick={onClose}
+    >
+      <div
+        className="bg-bg-card border border-border rounded-2xl w-full max-w-lg max-h-[80vh] flex flex-col overflow-hidden shadow-2xl animate-in fade-in zoom-in-95 duration-200"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="flex items-center gap-3 px-5 py-4 border-b border-border shrink-0">
+          <div className="w-9 h-9 rounded-xl bg-accent/10 flex items-center justify-center shrink-0">
+            <Film className="w-5 h-5 text-accent" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <h3 className="font-semibold text-text-primary truncate text-base">
+              {scene.title || "Untitled Scene"}
+            </h3>
+            {scene.duration_minutes > 0 && (
+              <p className="flex items-center gap-1 text-xs text-text-muted mt-0.5">
+                <Clock className="w-3 h-3" />
+                {fmtMins(scene.duration_minutes)} estimated
+              </p>
+            )}
+          </div>
+          <button
+            onClick={onClose}
+            className="text-text-muted hover:text-text-primary transition-colors p-1.5 hover:bg-bg-card-hover rounded-lg"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        {/* Content */}
+        <div className="flex-1 overflow-auto p-5">
+          {scene.scene_text && (
+            <div className="rounded-xl bg-bg-primary border border-border p-5">
+              <FountainPreview text={scene.scene_text} />
+            </div>
+          )}
+
+          {scene.scene_file_url && isPdf && (
+            <iframe
+              src={scene.scene_file_url}
+              className="w-full min-h-[50vh] rounded-xl border border-border"
+              title={scene.scene_file_name || "Scene file"}
+            />
+          )}
+
+          {scene.scene_file_url && isDocx && (
+            <div className="rounded-xl bg-bg-primary border border-border p-5">
+              {loadingDocx ? (
+                <div className="flex items-center justify-center py-12 gap-2 text-text-muted">
+                  <Loader2 className="w-5 h-5 animate-spin" />Loading document...
+                </div>
+              ) : docxHtml ? (
+                <div className="prose prose-sm max-w-none text-text-primary" dangerouslySetInnerHTML={{ __html: docxHtml }} />
+              ) : null}
+            </div>
+          )}
+
+          {scene.scene_file_url && !isPdf && !isDocx && (
+            <a href={scene.scene_file_url} target="_blank" rel="noopener noreferrer"
+              className="flex items-center gap-2 text-sm text-accent hover:text-accent-hover p-4 rounded-xl border border-border bg-bg-primary hover:bg-accent/5 transition-colors">
+              <FileText className="w-5 h-5" />
+              <span>Download {fileName || "file"}</span>
+            </a>
+          )}
+
+          {!hasContent && (
+            <div className="flex flex-col items-center justify-center py-12 text-center">
+              <Film className="w-10 h-10 text-text-muted mb-3" />
+              <p className="text-text-muted text-sm">No scene content yet</p>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
 
 const statusStyles: Record<ShotStatus, string> = {
   planned: "bg-warning/10 text-warning",
@@ -52,12 +205,15 @@ export default function ShotCard({ shot, locations, references, canEdit, project
   const [editImageUrl, setEditImageUrl] = useState(shot.image_url || "");
   const [uploadingImage, setUploadingImage] = useState(false);
   const statusRef = useRef<HTMLDivElement>(null);
+  const [scenes, setScenes] = useState<Scene[]>([]);
+  const [showSceneViewer, setShowSceneViewer] = useState(false);
   const [form, setForm] = useState({
     title: shot.title,
     description: shot.description || "",
     shot_type: shot.shot_type || "",
     status: shot.status,
     location_id: shot.location_id || "",
+    scene_id: shot.scene_id || "",
     notes: shot.notes || "",
   });
 
@@ -71,7 +227,17 @@ export default function ShotCard({ shot, locations, references, canEdit, project
     return () => document.removeEventListener("mousedown", handleClick);
   }, [statusOpen]);
 
+  // Fetch scenes for the selected location
+  useEffect(() => {
+    const locId = form.location_id;
+    if (!locId) { setScenes([]); return; }
+    fetch(`/api/projects/${projectId}/locations/${locId}/scenes`)
+      .then((r) => (r.ok ? r.json() : []))
+      .then((d) => setScenes(d));
+  }, [form.location_id, projectId]);
+
   const assignedLocation = locations.find((l) => l.id === shot.location_id);
+  const assignedScene = scenes.find((s) => s.id === shot.scene_id);
   const existingImages = references.filter((r) => r.image_url);
 
   async function save() {
@@ -84,6 +250,7 @@ export default function ShotCard({ shot, locations, references, canEdit, project
         shot_type: form.shot_type || null,
         status: form.status,
         location_id: form.location_id || null,
+        scene_id: form.scene_id || null,
         notes: form.notes || null,
         image_url: editImageUrl || null,
       }),
@@ -211,15 +378,33 @@ export default function ShotCard({ shot, locations, references, canEdit, project
             </p>
           )}
 
-          {/* Location badge */}
-          {assignedLocation && !expanded && (
-            <div className="flex items-center gap-1.5 text-sm text-accent mb-1">
-              <MapPin className="w-3.5 h-3.5" />
-              {assignedLocation.name}
+          {/* Location & scene badges */}
+          {!expanded && (assignedLocation || assignedScene) && (
+            <div className="flex flex-wrap items-center gap-2 mb-1">
+              {assignedLocation && (
+                <span className="flex items-center gap-1.5 text-sm text-accent">
+                  <MapPin className="w-3.5 h-3.5" />
+                  {assignedLocation.name}
+                </span>
+              )}
+              {assignedScene && (
+                <button
+                  onClick={(e) => { e.stopPropagation(); setShowSceneViewer(true); }}
+                  className="flex items-center gap-1.5 text-xs text-text-secondary bg-bg-card-hover hover:bg-accent/10 hover:text-accent rounded-full px-2 py-0.5 transition-colors"
+                >
+                  <Film className="w-3 h-3" />
+                  {assignedScene.title || "Untitled scene"}
+                </button>
+              )}
             </div>
           )}
         </div>
       </div>
+
+      {/* Scene viewer modal */}
+      {showSceneViewer && assignedScene && (
+        <SceneViewerModal scene={assignedScene} onClose={() => setShowSceneViewer(false)} />
+      )}
 
       {/* Expanded detail / edit area */}
       {expanded && (
@@ -231,10 +416,23 @@ export default function ShotCard({ shot, locations, references, canEdit, project
             </p>
           )}
 
-          {assignedLocation && (
-            <div className="flex items-center gap-1.5 text-sm text-accent">
-              <MapPin className="w-3.5 h-3.5" />
-              {assignedLocation.name}
+          {(assignedLocation || assignedScene) && (
+            <div className="flex flex-wrap items-center gap-3">
+              {assignedLocation && (
+                <span className="flex items-center gap-1.5 text-sm text-accent">
+                  <MapPin className="w-3.5 h-3.5" />
+                  {assignedLocation.name}
+                </span>
+              )}
+              {assignedScene && (
+                <button
+                  onClick={() => setShowSceneViewer(true)}
+                  className="flex items-center gap-1.5 text-sm text-text-secondary hover:text-accent transition-colors"
+                >
+                  <Film className="w-3.5 h-3.5" />
+                  {assignedScene.title || "Untitled scene"}
+                </button>
+              )}
             </div>
           )}
 
@@ -357,12 +555,22 @@ export default function ShotCard({ shot, locations, references, canEdit, project
               </div>
               <select
                 value={form.location_id}
-                onChange={(e) => setForm((f) => ({ ...f, location_id: e.target.value }))}
+                onChange={(e) => setForm((f) => ({ ...f, location_id: e.target.value, scene_id: "" }))}
                 className="w-full bg-bg-input border border-border rounded-lg px-3 py-2 text-text-primary text-sm focus:outline-none focus:border-accent"
               >
                 <option value="">Assign to location</option>
                 {locations.map((loc) => <option key={loc.id} value={loc.id}>{loc.name}</option>)}
               </select>
+              {form.location_id && scenes.length > 0 && (
+                <select
+                  value={form.scene_id}
+                  onChange={(e) => setForm((f) => ({ ...f, scene_id: e.target.value }))}
+                  className="w-full bg-bg-input border border-border rounded-lg px-3 py-2 text-text-primary text-sm focus:outline-none focus:border-accent"
+                >
+                  <option value="">Attach to scene (optional)</option>
+                  {scenes.map((sc) => <option key={sc.id} value={sc.id}>{sc.title || "Untitled scene"}{sc.duration_minutes ? ` (${sc.duration_minutes}m)` : ""}</option>)}
+                </select>
+              )}
               <textarea
                 value={form.notes}
                 onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}

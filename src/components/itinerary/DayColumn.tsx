@@ -260,11 +260,11 @@ export default function DayColumn({ day, canEdit, projectId, onUpdate, onRequest
                     {canEdit && (
                       <button
                         onClick={() => openInsertAt(idx)}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1 px-2 py-1 rounded-full bg-accent/80 sm:bg-accent text-white text-[10px] font-medium opacity-60 sm:opacity-0 sm:group-hover/connector:opacity-100 hover:opacity-100 active:opacity-100 hover:bg-accent-hover active:bg-accent-hover transition-all shadow-md z-10"
+                        className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1 px-2 py-1 rounded-full bg-accent text-white text-[10px] font-medium hover:bg-accent-hover active:bg-accent-hover transition-all shadow-md z-10"
                         title="Insert location here"
                       >
                         <Plus className="w-3 h-3" />
-                        <span className="hidden sm:inline">Insert</span>
+                        Insert
                       </button>
                     )}
                   </div>

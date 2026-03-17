@@ -3,11 +3,12 @@
 import { useState, useEffect, use, useRef } from "react";
 import { useUser } from "@clerk/nextjs";
 import { useRouter, useSearchParams } from "next/navigation";
-import { MapPin, Camera, ListChecks, Users, ArrowLeft, Pencil, Check, X, Upload, Download, CalendarDays, ArrowRight } from "lucide-react";
+import { MapPin, Camera, ListChecks, Users, ArrowLeft, Pencil, Check, X, Upload, Download, CalendarDays, ArrowRight, Film } from "lucide-react";
 import { Project, ShootDayWithLocations } from "@/lib/types";
 import ItineraryView from "@/components/itinerary/ItineraryView";
 import ReferencesView from "@/components/references/ReferencesView";
 import ShotListView from "@/components/shots/ShotListView";
+import ScenesView from "@/components/scenes/ScenesView";
 import TeamView from "@/components/team/TeamView";
 import ChatBox from "@/components/chat/ChatBox";
 import { TrackingProvider } from "@/components/tracking/TrackingProvider";
@@ -19,6 +20,7 @@ interface ProjectData extends Project {
 
 const tabs = [
   { id: "itinerary", label: "Itinerary", icon: MapPin },
+  { id: "scenes", label: "Scenes", icon: Film },
   { id: "references", label: "References", icon: Camera },
   { id: "shots", label: "Shot List", icon: ListChecks },
   { id: "team", label: "Team", icon: Users },
@@ -36,9 +38,9 @@ export default function ProjectPage({ params }: { params: Promise<{ projectId: s
     if (typeof window !== "undefined") {
       // Check query param first (from notification deep links), then hash
       const tabParam = new URLSearchParams(window.location.search).get("tab");
-      if (tabParam && ["itinerary", "references", "shots", "team"].includes(tabParam)) return tabParam as TabId;
+      if (tabParam && ["itinerary", "scenes", "references", "shots", "team"].includes(tabParam)) return tabParam as TabId;
       const hash = window.location.hash.slice(1);
-      if (["itinerary", "references", "shots", "team"].includes(hash)) return hash as TabId;
+      if (["itinerary", "scenes", "references", "shots", "team"].includes(hash)) return hash as TabId;
     }
     return "itinerary";
   });
@@ -393,6 +395,7 @@ export default function ProjectPage({ params }: { params: Promise<{ projectId: s
 
       {/* Tab Content */}
       {activeTab === "itinerary" && <ItineraryView projectId={projectId} canEdit={canEdit} startDate={project.start_date ?? null} onDaysCountChange={setDaysCount} onProgressChange={(c, t) => setProgress({ completed: c, total: t })} />}
+      {activeTab === "scenes" && <ScenesView projectId={projectId} canEdit={canEdit} />}
       {activeTab === "references" && <ReferencesView projectId={projectId} canEdit={canEdit} />}
       {activeTab === "shots" && <ShotListView projectId={projectId} canEdit={canEdit} currentUserId={currentUserId} />}
       {activeTab === "team" && <TeamView projectId={projectId} canEdit={canEdit} isOwner={project.role === "owner"} />}

@@ -111,6 +111,7 @@ create table shots (
   id uuid primary key default uuid_generate_v4(),
   project_id uuid references projects(id) on delete cascade not null,
   location_id uuid references locations(id) on delete set null,
+  scene_id uuid references scenes(id) on delete set null,
   title text not null,
   description text,
   shot_type text, -- 'wide', 'close-up', 'aerial', 'tracking', etc.

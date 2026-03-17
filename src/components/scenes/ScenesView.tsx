@@ -1,0 +1,562 @@
+"use client";
+
+import { useState, useEffect, useCallback } from "react";
+import { Film, Clock, MapPin, ListChecks, ChevronDown, X, FileText, Loader2, Search, Plus } from "lucide-react";
+import { parseFountain, applyInlineFormatting } from "@/lib/fountain";
+import type { FountainElement } from "@/lib/fountain";
+import type { Scene, Location } from "@/lib/types";
+
+interface EnrichedScene extends Scene {
+  location_name: string | null;
+  day_number: number | null;
+  day_title: string | null;
+  shot_count: number;
+}
+
+function fmtMins(mins: number): string {
+  const h = Math.floor(mins / 60);
+  const m = mins % 60;
+  if (h === 0) return `${m}m`;
+  if (m === 0) return `${h}h`;
+  return `${h}h ${m}m`;
+}
+
+function FountainPreview({ text }: { text: string }) {
+  const elements = parseFountain(text);
+  function renderElement(el: FountainElement, idx: number) {
+    const inline = (t: string) => ({ __html: applyInlineFormatting(t) });
+    switch (el.type) {
+      case "scene_heading":
+        return <p key={idx} className="font-bold uppercase tracking-wide mt-6 mb-1 text-text-primary border-b border-border pb-1">{el.text}</p>;
+      case "action":
+        return <p key={idx} className="my-1 text-text-primary leading-relaxed" dangerouslySetInnerHTML={inline(el.text!)} />;
+      case "character":
+        return <p key={idx} className="mt-4 mb-0 font-semibold uppercase tracking-wider text-center text-text-primary">{el.text}</p>;
+      case "parenthetical":
+        return <p key={idx} className="italic text-center text-text-secondary text-sm my-0">{el.text}</p>;
+      case "dialogue":
+        return <p key={idx} className="text-center max-w-xs mx-auto my-0.5 text-text-primary leading-relaxed" dangerouslySetInnerHTML={inline(el.text!)} />;
+      case "transition":
+        return <p key={idx} className="text-right uppercase italic text-text-secondary mt-4 mb-1 text-sm">{el.text}</p>;
+      case "centered":
+        return <p key={idx} className="text-center my-2 text-text-primary" dangerouslySetInnerHTML={inline(el.text!)} />;
+      case "page_break":
+        return <hr key={idx} className="border-border my-4" />;
+      case "blank":
+        return <div key={idx} className="h-2" />;
+      default:
+        return null;
+    }
+  }
+  return <div className="font-mono text-sm leading-relaxed px-2">{elements.map((el, i) => renderElement(el, i))}</div>;
+}
+
+function SceneViewerModal({ scene, onClose }: { scene: EnrichedScene; onClose: () => void }) {
+  const [docxHtml, setDocxHtml] = useState<string | null>(null);
+  const [loadingDocx, setLoadingDocx] = useState(false);
+
+  const fileName = scene.scene_file_name || "";
+  const isDocx = fileName.toLowerCase().endsWith(".docx") || fileName.toLowerCase().endsWith(".doc");
+  const isPdf = fileName.toLowerCase().endsWith(".pdf");
+  const hasContent = !!scene.scene_text || !!scene.scene_file_url;
+
+  useEffect(() => {
+    if (isDocx && scene.scene_file_url && !docxHtml) {
+      setLoadingDocx(true);
+      import("mammoth").then((mammoth) => {
+        fetch(scene.scene_file_url!)
+          .then((r) => r.arrayBuffer())
+          .then((buf) => mammoth.default.convertToHtml({ arrayBuffer: buf }))
+          .then((result) => setDocxHtml(result.value))
+          .catch(() => setDocxHtml("<p style='color:red'>Could not render document.</p>"))
+          .finally(() => setLoadingDocx(false));
+      });
+    }
+  }, [isDocx, scene.scene_file_url, docxHtml]);
+
+  useEffect(() => {
+    function handleKey(e: KeyboardEvent) {
+      if (e.key === "Escape") onClose();
+    }
+    document.addEventListener("keydown", handleKey);
+    return () => document.removeEventListener("keydown", handleKey);
+  }, [onClose]);
+
+  return (
+    <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4" onClick={onClose}>
+      <div className="bg-bg-card border border-border rounded-2xl w-full max-w-lg max-h-[80vh] flex flex-col overflow-hidden shadow-2xl animate-in fade-in zoom-in-95 duration-200" onClick={(e) => e.stopPropagation()}>
+        {/* Header */}
+        <div className="flex items-center gap-3 px-5 py-4 border-b border-border shrink-0">
+          <div className="w-9 h-9 rounded-xl bg-accent/10 flex items-center justify-center shrink-0">
+            <Film className="w-5 h-5 text-accent" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <h3 className="font-semibold text-text-primary truncate text-base">{scene.title || "Untitled Scene"}</h3>
+            <div className="flex items-center gap-3 mt-0.5">
+              <span className="flex items-center gap-1 text-xs text-text-muted">
+                <MapPin className="w-3 h-3" />{scene.location_name}
+              </span>
+              {scene.duration_minutes > 0 && (
+                <span className="flex items-center gap-1 text-xs text-text-muted">
+                  <Clock className="w-3 h-3" />{fmtMins(scene.duration_minutes)}
+                </span>
+              )}
+            </div>
+          </div>
+          <button onClick={onClose} className="text-text-muted hover:text-text-primary transition-colors p-1.5 hover:bg-bg-card-hover rounded-lg">
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        {/* Content */}
+        <div className="flex-1 overflow-auto p-5">
+          {scene.scene_text && (
+            <div className="rounded-xl bg-bg-primary border border-border p-5">
+              <FountainPreview text={scene.scene_text} />
+            </div>
+          )}
+          {scene.scene_file_url && isPdf && (
+            <iframe src={scene.scene_file_url} className="w-full min-h-[50vh] rounded-xl border border-border" title={scene.scene_file_name || "Scene file"} />
+          )}
+          {scene.scene_file_url && isDocx && (
+            <div className="rounded-xl bg-bg-primary border border-border p-5">
+              {loadingDocx ? (
+                <div className="flex items-center justify-center py-12 gap-2 text-text-muted">
+                  <Loader2 className="w-5 h-5 animate-spin" />Loading document...
+                </div>
+              ) : docxHtml ? (
+                <div className="prose prose-sm max-w-none text-text-primary" dangerouslySetInnerHTML={{ __html: docxHtml }} />
+              ) : null}
+            </div>
+          )}
+          {scene.scene_file_url && !isPdf && !isDocx && (
+            <a href={scene.scene_file_url} target="_blank" rel="noopener noreferrer"
+              className="flex items-center gap-2 text-sm text-accent hover:text-accent-hover p-4 rounded-xl border border-border bg-bg-primary hover:bg-accent/5 transition-colors">
+              <FileText className="w-5 h-5" /><span>Download {fileName || "file"}</span>
+            </a>
+          )}
+          {!hasContent && (
+            <div className="flex flex-col items-center justify-center py-12 text-center">
+              <Film className="w-10 h-10 text-text-muted mb-3" />
+              <p className="text-text-muted text-sm">No scene content yet</p>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+interface Props {
+  projectId: string;
+  canEdit: boolean;
+}
+
+export default function ScenesView({ projectId, canEdit }: Props) {
+  const [scenes, setScenes] = useState<EnrichedScene[]>([]);
+  const [locations, setLocations] = useState<Location[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
+  const [groupBy, setGroupBy] = useState<"location" | "day">("location");
+  const [viewingScene, setViewingScene] = useState<EnrichedScene | null>(null);
+  const [adding, setAdding] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [newScene, setNewScene] = useState({ title: "", location_id: "", duration_h: 0, duration_m: 0 });
+
+  const fetchScenes = useCallback(async () => {
+    const res = await fetch(`/api/projects/${projectId}/scenes`);
+    if (res.ok) {
+      const data = await res.json();
+      setScenes(data);
+    }
+    setLoading(false);
+  }, [projectId]);
+
+  const fetchLocations = useCallback(async () => {
+    const res = await fetch(`/api/projects/${projectId}/locations`);
+    if (res.ok) {
+      const data = await res.json();
+      setLocations(data);
+    }
+  }, [projectId]);
+
+  useEffect(() => {
+    fetchScenes();
+    fetchLocations();
+  }, [fetchScenes, fetchLocations]);
+
+  async function addScene() {
+    setSaving(true);
+    const duration = (newScene.duration_h * 60) + newScene.duration_m;
+    await fetch(`/api/projects/${projectId}/scenes`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        title: newScene.title.trim() || null,
+        location_id: newScene.location_id || null,
+        duration_minutes: duration,
+      }),
+    });
+    setNewScene({ title: "", location_id: "", duration_h: 0, duration_m: 0 });
+    setAdding(false);
+    setSaving(false);
+    await fetchScenes();
+  }
+
+  const filtered = scenes.filter((s) => {
+    if (!search) return true;
+    const q = search.toLowerCase();
+    return (
+      (s.title || "").toLowerCase().includes(q) ||
+      (s.location_name || "").toLowerCase().includes(q)
+    );
+  });
+
+  const totalDuration = filtered.reduce((sum, s) => sum + (s.duration_minutes || 0), 0);
+  const totalShots = filtered.reduce((sum, s) => sum + s.shot_count, 0);
+  const withContent = filtered.filter((s) => s.scene_text || s.scene_file_url).length;
+
+  // Group scenes
+  const groups: { key: string; label: string; sublabel?: string; scenes: EnrichedScene[] }[] = [];
+
+  if (groupBy === "location") {
+    const byLoc: Record<string, EnrichedScene[]> = {};
+    for (const s of filtered) {
+      const key = s.location_id || "unassigned";
+      if (!byLoc[key]) byLoc[key] = [];
+      byLoc[key].push(s);
+    }
+    // Show assigned locations first, unassigned last
+    const locKeys = Object.keys(byLoc).filter((k) => k !== "unassigned");
+    for (const locId of locKeys) {
+      const locScenes = byLoc[locId];
+      const first = locScenes[0];
+      groups.push({
+        key: locId,
+        label: first.location_name || "Unknown",
+        sublabel: first.day_number != null ? `Day ${first.day_number}${first.day_title ? ` — ${first.day_title}` : ""}` : undefined,
+        scenes: locScenes,
+      });
+    }
+    if (byLoc["unassigned"]) {
+      groups.push({ key: "unassigned", label: "Unassigned", scenes: byLoc["unassigned"] });
+    }
+  } else {
+    const byDay: Record<string, EnrichedScene[]> = {};
+    const unassigned: EnrichedScene[] = [];
+    for (const s of filtered) {
+      if (s.day_number != null) {
+        const key = `day-${s.day_number}`;
+        if (!byDay[key]) byDay[key] = [];
+        byDay[key].push(s);
+      } else {
+        unassigned.push(s);
+      }
+    }
+    const sortedKeys = Object.keys(byDay).sort((a, b) => {
+      const aN = parseInt(a.split("-")[1]);
+      const bN = parseInt(b.split("-")[1]);
+      return aN - bN;
+    });
+    for (const key of sortedKeys) {
+      const dayScenes = byDay[key];
+      const first = dayScenes[0];
+      groups.push({
+        key,
+        label: `Day ${first.day_number}`,
+        sublabel: first.day_title || undefined,
+        scenes: dayScenes,
+      });
+    }
+    if (unassigned.length > 0) {
+      groups.push({ key: "unassigned", label: "Unassigned", scenes: unassigned });
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-20 gap-3 text-text-muted">
+        <Loader2 className="w-5 h-5 animate-spin" />
+        Loading scenes...
+      </div>
+    );
+  }
+
+  if (scenes.length === 0 && !adding) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20 text-center">
+        <div className="w-16 h-16 rounded-2xl bg-accent/10 flex items-center justify-center mb-4">
+          <Film className="w-8 h-8 text-accent" />
+        </div>
+        <h3 className="text-lg font-semibold text-text-primary mb-1">No scenes yet</h3>
+        <p className="text-text-muted text-sm max-w-sm mb-4">
+          Add scenes to plan your shoot. You can assign them to locations now or later.
+        </p>
+        {canEdit && (
+          <button
+            onClick={() => setAdding(true)}
+            className="flex items-center gap-2 bg-accent hover:bg-accent-hover text-white rounded-xl px-5 py-2.5 text-sm font-medium transition-colors"
+          >
+            <Plus className="w-4 h-4" />Add First Scene
+          </button>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      {/* Stats bar */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <div className="bg-bg-card border border-border rounded-xl p-3.5">
+          <div className="flex items-center gap-2 mb-1">
+            <Film className="w-4 h-4 text-accent" />
+            <span className="text-xs text-text-muted uppercase tracking-wider font-medium">Scenes</span>
+          </div>
+          <p className="text-2xl font-bold text-text-primary">{filtered.length}</p>
+        </div>
+        <div className="bg-bg-card border border-border rounded-xl p-3.5">
+          <div className="flex items-center gap-2 mb-1">
+            <Clock className="w-4 h-4 text-accent" />
+            <span className="text-xs text-text-muted uppercase tracking-wider font-medium">Total Runtime</span>
+          </div>
+          <p className="text-2xl font-bold text-text-primary">{totalDuration > 0 ? fmtMins(totalDuration) : "—"}</p>
+        </div>
+        <div className="bg-bg-card border border-border rounded-xl p-3.5">
+          <div className="flex items-center gap-2 mb-1">
+            <ListChecks className="w-4 h-4 text-accent" />
+            <span className="text-xs text-text-muted uppercase tracking-wider font-medium">Shots</span>
+          </div>
+          <p className="text-2xl font-bold text-text-primary">{totalShots}</p>
+        </div>
+        <div className="bg-bg-card border border-border rounded-xl p-3.5">
+          <div className="flex items-center gap-2 mb-1">
+            <FileText className="w-4 h-4 text-accent" />
+            <span className="text-xs text-text-muted uppercase tracking-wider font-medium">With Content</span>
+          </div>
+          <p className="text-2xl font-bold text-text-primary">
+            {withContent}<span className="text-sm font-normal text-text-muted">/{filtered.length}</span>
+          </p>
+        </div>
+      </div>
+
+      {/* Search + group toggle + add button */}
+      <div className="flex items-center gap-3">
+        <div className="flex-1 relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-muted" />
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search scenes..."
+            className="w-full bg-bg-card border border-border rounded-xl pl-9 pr-3 py-2.5 text-text-primary text-sm focus:outline-none focus:border-accent placeholder:text-text-muted"
+          />
+        </div>
+        <div className="flex items-center bg-bg-card border border-border rounded-xl overflow-hidden shrink-0">
+          <button
+            onClick={() => setGroupBy("location")}
+            className={`px-3 py-2.5 text-xs font-medium transition-colors ${groupBy === "location" ? "bg-accent text-white" : "text-text-secondary hover:text-text-primary"}`}
+          >
+            <MapPin className="w-3.5 h-3.5 inline mr-1" />Location
+          </button>
+          <button
+            onClick={() => setGroupBy("day")}
+            className={`px-3 py-2.5 text-xs font-medium transition-colors ${groupBy === "day" ? "bg-accent text-white" : "text-text-secondary hover:text-text-primary"}`}
+          >
+            <Clock className="w-3.5 h-3.5 inline mr-1" />Day
+          </button>
+        </div>
+        {canEdit && (
+          <button
+            onClick={() => setAdding(true)}
+            className="flex items-center gap-2 bg-accent hover:bg-accent-hover text-white rounded-xl px-4 py-2.5 text-sm font-medium transition-colors shrink-0"
+          >
+            <Plus className="w-4 h-4" />
+            <span className="hidden sm:inline">Add Scene</span>
+          </button>
+        )}
+      </div>
+
+      {/* Add scene form */}
+      {adding && (
+        <div className="bg-bg-card border border-accent/30 rounded-xl p-5 space-y-4">
+          <div className="flex items-center gap-2 mb-1">
+            <div className="w-8 h-8 rounded-lg bg-accent/10 flex items-center justify-center">
+              <Film className="w-4 h-4 text-accent" />
+            </div>
+            <h3 className="text-sm font-semibold text-text-primary">New Scene</h3>
+          </div>
+
+          <input
+            value={newScene.title}
+            onChange={(e) => setNewScene((f) => ({ ...f, title: e.target.value }))}
+            placeholder="Scene title (e.g. INT. COFFEE SHOP - DAY)"
+            className="w-full bg-bg-input border border-border rounded-lg px-3 py-2.5 text-text-primary text-sm focus:outline-none focus:border-accent"
+            autoFocus
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && newScene.title.trim()) addScene();
+              if (e.key === "Escape") { setAdding(false); setNewScene({ title: "", location_id: "", duration_h: 0, duration_m: 0 }); }
+            }}
+          />
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs text-text-muted mb-1.5 font-medium">Location (optional)</label>
+              <select
+                value={newScene.location_id}
+                onChange={(e) => setNewScene((f) => ({ ...f, location_id: e.target.value }))}
+                className="w-full bg-bg-input border border-border rounded-lg px-3 py-2.5 text-text-primary text-sm focus:outline-none focus:border-accent"
+              >
+                <option value="">Unassigned</option>
+                {locations.map((loc) => (
+                  <option key={loc.id} value={loc.id}>{loc.name}</option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-xs text-text-muted mb-1.5 font-medium">Duration (optional)</label>
+              <div className="flex items-center gap-1.5">
+                <input
+                  type="number" min="0"
+                  value={newScene.duration_h || ""}
+                  placeholder="0"
+                  onChange={(e) => setNewScene((f) => ({ ...f, duration_h: parseInt(e.target.value) || 0 }))}
+                  className="w-14 bg-bg-input border border-border rounded-lg px-2 py-2.5 text-text-primary text-sm focus:outline-none focus:border-accent text-center"
+                />
+                <span className="text-xs text-text-muted">h</span>
+                <input
+                  type="number" min="0" max="59"
+                  value={newScene.duration_m || ""}
+                  placeholder="0"
+                  onChange={(e) => setNewScene((f) => ({ ...f, duration_m: Math.min(59, parseInt(e.target.value) || 0) }))}
+                  className="w-14 bg-bg-input border border-border rounded-lg px-2 py-2.5 text-text-primary text-sm focus:outline-none focus:border-accent text-center"
+                />
+                <span className="text-xs text-text-muted">m</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 pt-1">
+            <button
+              onClick={addScene}
+              disabled={saving}
+              className="flex items-center gap-2 bg-accent hover:bg-accent-hover disabled:opacity-40 text-white rounded-lg px-4 py-2 text-sm font-medium transition-colors"
+            >
+              {saving && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+              Add Scene
+            </button>
+            <button
+              onClick={() => { setAdding(false); setNewScene({ title: "", location_id: "", duration_h: 0, duration_m: 0 }); }}
+              className="text-sm text-text-secondary hover:text-text-primary transition-colors px-3 py-2"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Scene groups */}
+      <div className="space-y-4">
+        {groups.map((group) => {
+          const groupDuration = group.scenes.reduce((sum, s) => sum + (s.duration_minutes || 0), 0);
+
+          return (
+            <div key={group.key} className="bg-bg-card border border-border rounded-xl overflow-hidden">
+              {/* Group header */}
+              <div className="flex items-center justify-between px-4 py-3 bg-bg-card-hover/50">
+                <div className="flex items-center gap-2 min-w-0">
+                  {groupBy === "location" ? (
+                    <MapPin className="w-4 h-4 text-accent shrink-0" />
+                  ) : (
+                    <Clock className="w-4 h-4 text-accent shrink-0" />
+                  )}
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-text-primary truncate">{group.label}</p>
+                    {group.sublabel && (
+                      <p className="text-xs text-text-muted truncate">{group.sublabel}</p>
+                    )}
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 shrink-0">
+                  <span className="text-xs text-text-muted">{group.scenes.length} scene{group.scenes.length !== 1 ? "s" : ""}</span>
+                  {groupDuration > 0 && (
+                    <span className="text-xs font-medium text-accent bg-accent/10 rounded-full px-2 py-0.5">
+                      {fmtMins(groupDuration)}
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {/* Scene rows */}
+              <div className="divide-y divide-border">
+                {group.scenes.map((scene) => {
+                  const hasContent = !!scene.scene_text || !!scene.scene_file_url;
+                  return (
+                    <button
+                      key={scene.id}
+                      onClick={() => setViewingScene(scene)}
+                      className="w-full flex items-center gap-3 px-4 py-3 hover:bg-bg-card-hover/50 transition-colors text-left group"
+                    >
+                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 transition-colors ${hasContent ? "bg-accent/10 text-accent" : "bg-bg-card-hover text-text-muted"}`}>
+                        <Film className="w-4 h-4" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-text-primary truncate group-hover:text-accent transition-colors">
+                          {scene.title || "Untitled Scene"}
+                        </p>
+                        <div className="flex items-center gap-3 mt-0.5">
+                          {groupBy === "day" && scene.location_name && (
+                            <span className="flex items-center gap-1 text-xs text-text-muted">
+                              <MapPin className="w-3 h-3" />{scene.location_name}
+                            </span>
+                          )}
+                          {groupBy === "day" && !scene.location_name && (
+                            <span className="text-xs text-text-muted italic">No location</span>
+                          )}
+                          {groupBy === "location" && scene.day_number != null && (
+                            <span className="text-xs text-text-muted">Day {scene.day_number}</span>
+                          )}
+                          {!hasContent && (
+                            <span className="text-xs text-warning/70">No content</span>
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3 shrink-0">
+                        {scene.shot_count > 0 && (
+                          <span className="flex items-center gap-1 text-xs text-text-muted">
+                            <ListChecks className="w-3 h-3" />{scene.shot_count}
+                          </span>
+                        )}
+                        {scene.duration_minutes > 0 ? (
+                          <span className="flex items-center gap-1 text-xs font-medium text-accent bg-accent/10 rounded-full px-2 py-0.5">
+                            <Clock className="w-3 h-3" />{fmtMins(scene.duration_minutes)}
+                          </span>
+                        ) : (
+                          <span className="text-xs text-warning/70 bg-warning/10 rounded-full px-2 py-0.5">
+                            No duration
+                          </span>
+                        )}
+                        <ChevronDown className="w-4 h-4 text-text-muted opacity-0 group-hover:opacity-100 -rotate-90 transition-all" />
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {filtered.length === 0 && search && (
+        <div className="text-center py-12">
+          <p className="text-text-muted text-sm">No scenes match &ldquo;{search}&rdquo;</p>
+        </div>
+      )}
+
+      {/* Scene viewer modal */}
+      {viewingScene && (
+        <SceneViewerModal scene={viewingScene} onClose={() => setViewingScene(null)} />
+      )}
+    </div>
+  );
+}

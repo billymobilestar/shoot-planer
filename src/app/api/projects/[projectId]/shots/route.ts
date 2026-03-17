@@ -45,6 +45,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ pro
       shot_type: body.shot_type || null,
       image_url: body.image_url || null,
       location_id: body.location_id || null,
+      scene_id: body.scene_id || null,
       status: body.status || "planned",
       position: nextPosition,
       notes: body.notes || null,

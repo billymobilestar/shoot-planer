@@ -433,9 +433,9 @@ export default function ItineraryView({ projectId, canEdit, startDate, onDaysCou
             return (
               <div key={day.id}>
                 {dayIdx > 0 && (
-                  <div className="relative group/insert-day">
+                  <div className="relative py-3">
                     {prevLastLoc && currFirstLoc ? (
-                      <div className="py-3 flex flex-col items-center">
+                      <div className="flex justify-center">
                         <DriveConnector
                           originLat={prevLastLoc.latitude}
                           originLng={prevLastLoc.longitude}
@@ -448,16 +448,14 @@ export default function ItineraryView({ projectId, canEdit, startDate, onDaysCou
                     )}
                     {/* Insert day between */}
                     {canEdit && (
-                      <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 flex justify-center z-10 pointer-events-none">
-                        <button
-                          onClick={() => requestInsertDay(prevDay!.day_number)}
-                          className="pointer-events-auto flex items-center gap-1 px-3 py-1.5 rounded-full bg-accent/80 sm:bg-accent text-white text-xs font-medium opacity-60 sm:opacity-0 sm:group-hover/insert-day:opacity-100 hover:opacity-100 active:opacity-100 hover:bg-accent-hover active:bg-accent-hover transition-all shadow-md"
-                          title="Insert a new day here"
-                        >
-                          <Plus className="w-3.5 h-3.5" />
-                          <span className="hidden sm:inline">Insert Day</span>
-                        </button>
-                      </div>
+                      <button
+                        onClick={() => requestInsertDay(prevDay!.day_number)}
+                        className="absolute right-0 top-1/2 -translate-y-1/2 flex items-center gap-1 px-3 py-1.5 rounded-full bg-accent text-white text-xs font-medium hover:bg-accent-hover active:bg-accent-hover transition-all shadow-md"
+                        title="Insert a new day here"
+                      >
+                        <Plus className="w-3.5 h-3.5" />
+                        Insert Day
+                      </button>
                     )}
                   </div>
                 )}

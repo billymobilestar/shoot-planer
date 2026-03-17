@@ -17,7 +17,7 @@ export async function PATCH(
   const supabase = getSupabaseAdmin();
 
   const updates: Record<string, unknown> = {};
-  const fields = ["title", "description", "shot_type", "image_url", "location_id", "status", "position", "notes"];
+  const fields = ["title", "description", "shot_type", "image_url", "location_id", "scene_id", "status", "position", "notes"];
   for (const field of fields) {
     if (body[field] !== undefined) updates[field] = body[field];
   }

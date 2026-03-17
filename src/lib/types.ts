@@ -58,7 +58,7 @@ export interface Location {
 
 export interface Scene {
   id: string;
-  location_id: string;
+  location_id: string | null;
   project_id: string;
   title: string | null;
   scene_text: string | null;
@@ -102,6 +102,7 @@ export interface Shot {
   id: string;
   project_id: string;
   location_id: string | null;
+  scene_id: string | null;
   title: string;
   description: string | null;
   shot_type: string | null;
