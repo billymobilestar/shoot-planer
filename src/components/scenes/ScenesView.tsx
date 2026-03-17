@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { Film, Clock, MapPin, ListChecks, ChevronDown, X, FileText, Loader2, Search, Plus, Upload, Edit3 } from "lucide-react";
+import { Film, Clock, MapPin, ListChecks, ChevronDown, X, FileText, Loader2, Search, Plus, Upload, Edit3, Trash2 } from "lucide-react";
 import { parseFountain, applyInlineFormatting } from "@/lib/fountain";
 import type { FountainElement } from "@/lib/fountain";
 import FountainEditor from "@/components/itinerary/FountainEditor";
@@ -54,17 +54,42 @@ function FountainPreview({ text }: { text: string }) {
   return <div className="font-mono text-sm leading-relaxed px-2">{elements.map((el, i) => renderElement(el, i))}</div>;
 }
 
-function SceneViewerModal({ scene, onClose }: { scene: EnrichedScene; onClose: () => void }) {
+interface SceneModalProps {
+  scene: EnrichedScene;
+  projectId: string;
+  locations: Location[];
+  canEdit: boolean;
+  onClose: () => void;
+  onSaved: () => void;
+  onDeleted: () => void;
+}
+
+function SceneDetailModal({ scene, projectId, locations, canEdit, onClose, onSaved, onDeleted }: SceneModalProps) {
+  const [editing, setEditing] = useState(false);
+  const [editMode, setEditMode] = useState<EditMode>(scene.scene_file_url ? "upload" : "write");
+  const [title, setTitle] = useState(scene.title || "");
+  const [locationId, setLocationId] = useState(scene.location_id || "");
+  const [durationH, setDurationH] = useState(Math.floor(scene.duration_minutes / 60));
+  const [durationM, setDurationM] = useState(scene.duration_minutes % 60);
+  const [sceneText, setSceneText] = useState(scene.scene_text || "");
+  const [fileUrl, setFileUrl] = useState(scene.scene_file_url || "");
+  const [fileName, setFileName] = useState(scene.scene_file_name || "");
+  const [saving, setSaving] = useState(false);
+  const [fileUploading, setFileUploading] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [docxHtml, setDocxHtml] = useState<string | null>(null);
   const [loadingDocx, setLoadingDocx] = useState(false);
 
-  const fileName = scene.scene_file_name || "";
-  const isDocx = fileName.toLowerCase().endsWith(".docx") || fileName.toLowerCase().endsWith(".doc");
-  const isPdf = fileName.toLowerCase().endsWith(".pdf");
-  const hasContent = !!scene.scene_text || !!scene.scene_file_url;
+  const displayFileName = editing ? fileName : (scene.scene_file_name || "");
+  const isDocx = displayFileName.toLowerCase().endsWith(".docx") || displayFileName.toLowerCase().endsWith(".doc");
+  const isPdf = displayFileName.toLowerCase().endsWith(".pdf");
+  const hasContent = editing
+    ? (editMode === "write" ? !!sceneText : !!fileUrl)
+    : (!!scene.scene_text || !!scene.scene_file_url);
 
   useEffect(() => {
-    if (isDocx && scene.scene_file_url && !docxHtml) {
+    if (!editing && isDocx && scene.scene_file_url && !docxHtml) {
       setLoadingDocx(true);
       import("mammoth").then((mammoth) => {
         fetch(scene.scene_file_url!)
@@ -75,76 +100,284 @@ function SceneViewerModal({ scene, onClose }: { scene: EnrichedScene; onClose: (
           .finally(() => setLoadingDocx(false));
       });
     }
-  }, [isDocx, scene.scene_file_url, docxHtml]);
+  }, [editing, isDocx, scene.scene_file_url, docxHtml]);
 
   useEffect(() => {
     function handleKey(e: KeyboardEvent) {
-      if (e.key === "Escape") onClose();
+      if (e.key === "Escape") {
+        if (editing) setEditing(false);
+        else onClose();
+      }
     }
     document.addEventListener("keydown", handleKey);
     return () => document.removeEventListener("keydown", handleKey);
-  }, [onClose]);
+  }, [onClose, editing]);
+
+  async function handleSave() {
+    setSaving(true);
+    const body: Record<string, unknown> = {
+      title: title.trim() || null,
+      location_id: locationId || null,
+      duration_minutes: (durationH * 60) + durationM,
+    };
+    if (editMode === "write") {
+      body.scene_text = sceneText || null;
+      body.scene_file_url = null;
+      body.scene_file_name = null;
+    } else {
+      body.scene_text = null;
+      body.scene_file_url = fileUrl || null;
+      body.scene_file_name = fileName || null;
+    }
+    await fetch(`/api/projects/${projectId}/scenes/${scene.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    setSaving(false);
+    setEditing(false);
+    onSaved();
+  }
+
+  async function handleDelete() {
+    setDeleting(true);
+    await fetch(`/api/projects/${projectId}/scenes/${scene.id}`, { method: "DELETE" });
+    setDeleting(false);
+    onDeleted();
+  }
+
+  async function handleFileUploadModal(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setFileUploading(true);
+    const fd = new FormData();
+    fd.append("file", file);
+    const res = await fetch("/api/upload", { method: "POST", body: fd });
+    if (res.ok) {
+      const { url } = await res.json();
+      setFileUrl(url);
+      setFileName(file.name);
+      setDocxHtml(null);
+    }
+    setFileUploading(false);
+    e.target.value = "";
+  }
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4" onClick={onClose}>
-      <div className="bg-bg-card border border-border rounded-2xl w-full max-w-lg max-h-[80vh] flex flex-col overflow-hidden shadow-2xl animate-in fade-in zoom-in-95 duration-200" onClick={(e) => e.stopPropagation()}>
+    <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => { if (!editing) onClose(); }}>
+      <div className="bg-bg-card border border-border rounded-2xl w-full max-w-lg max-h-[85vh] flex flex-col overflow-hidden shadow-2xl animate-in fade-in zoom-in-95 duration-200" onClick={(e) => e.stopPropagation()}>
         {/* Header */}
         <div className="flex items-center gap-3 px-5 py-4 border-b border-border shrink-0">
           <div className="w-9 h-9 rounded-xl bg-accent/10 flex items-center justify-center shrink-0">
             <Film className="w-5 h-5 text-accent" />
           </div>
           <div className="flex-1 min-w-0">
-            <h3 className="font-semibold text-text-primary truncate text-base">{scene.title || "Untitled Scene"}</h3>
-            <div className="flex items-center gap-3 mt-0.5">
-              <span className="flex items-center gap-1 text-xs text-text-muted">
-                <MapPin className="w-3 h-3" />{scene.location_name}
-              </span>
-              {scene.duration_minutes > 0 && (
-                <span className="flex items-center gap-1 text-xs text-text-muted">
-                  <Clock className="w-3 h-3" />{fmtMins(scene.duration_minutes)}
-                </span>
-              )}
-            </div>
+            {editing ? (
+              <input
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                placeholder="Scene title"
+                className="w-full bg-bg-input border border-border rounded-lg px-2.5 py-1.5 text-text-primary text-sm font-semibold focus:outline-none focus:border-accent"
+              />
+            ) : (
+              <>
+                <h3 className="font-semibold text-text-primary truncate text-base">{scene.title || "Untitled Scene"}</h3>
+                <div className="flex items-center gap-3 mt-0.5">
+                  {scene.location_name ? (
+                    <span className="flex items-center gap-1 text-xs text-text-muted">
+                      <MapPin className="w-3 h-3" />{scene.location_name}
+                    </span>
+                  ) : (
+                    <span className="text-xs text-text-muted italic">No location</span>
+                  )}
+                  {scene.duration_minutes > 0 && (
+                    <span className="flex items-center gap-1 text-xs text-text-muted">
+                      <Clock className="w-3 h-3" />{fmtMins(scene.duration_minutes)}
+                    </span>
+                  )}
+                </div>
+              </>
+            )}
           </div>
           <button onClick={onClose} className="text-text-muted hover:text-text-primary transition-colors p-1.5 hover:bg-bg-card-hover rounded-lg">
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        {/* Content */}
-        <div className="flex-1 overflow-auto p-5">
-          {scene.scene_text && (
-            <div className="rounded-xl bg-bg-primary border border-border p-5">
-              <FountainPreview text={scene.scene_text} />
-            </div>
-          )}
-          {scene.scene_file_url && isPdf && (
-            <iframe src={scene.scene_file_url} className="w-full min-h-[50vh] rounded-xl border border-border" title={scene.scene_file_name || "Scene file"} />
-          )}
-          {scene.scene_file_url && isDocx && (
-            <div className="rounded-xl bg-bg-primary border border-border p-5">
-              {loadingDocx ? (
-                <div className="flex items-center justify-center py-12 gap-2 text-text-muted">
-                  <Loader2 className="w-5 h-5 animate-spin" />Loading document...
+        {/* Content area */}
+        <div className="flex-1 overflow-auto p-5 space-y-4">
+          {/* Edit mode: metadata fields */}
+          {editing && (
+            <>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs text-text-muted mb-1.5 font-medium">Location</label>
+                  <select value={locationId} onChange={(e) => setLocationId(e.target.value)}
+                    className="w-full bg-bg-input border border-border rounded-lg px-3 py-2 text-text-primary text-sm focus:outline-none focus:border-accent">
+                    <option value="">Unassigned</option>
+                    {locations.map((loc) => <option key={loc.id} value={loc.id}>{loc.name}</option>)}
+                  </select>
                 </div>
-              ) : docxHtml ? (
-                <div className="prose prose-sm max-w-none text-text-primary" dangerouslySetInnerHTML={{ __html: docxHtml }} />
-              ) : null}
-            </div>
+                <div>
+                  <label className="block text-xs text-text-muted mb-1.5 font-medium">Duration</label>
+                  <div className="flex items-center gap-1.5">
+                    <input type="number" min="0" value={durationH || ""} placeholder="0"
+                      onChange={(e) => setDurationH(parseInt(e.target.value) || 0)}
+                      className="w-14 bg-bg-input border border-border rounded-lg px-2 py-2 text-text-primary text-sm focus:outline-none focus:border-accent text-center" />
+                    <span className="text-xs text-text-muted">h</span>
+                    <input type="number" min="0" max="59" value={durationM || ""} placeholder="0"
+                      onChange={(e) => setDurationM(Math.min(59, parseInt(e.target.value) || 0))}
+                      className="w-14 bg-bg-input border border-border rounded-lg px-2 py-2 text-text-primary text-sm focus:outline-none focus:border-accent text-center" />
+                    <span className="text-xs text-text-muted">m</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Content mode tabs */}
+              <div>
+                <label className="block text-xs text-text-muted mb-1.5 font-medium">Scene Content</label>
+                <div className="flex items-center gap-1 mb-3">
+                  <button onClick={() => setEditMode("write")}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${editMode === "write" ? "bg-accent text-white" : "text-text-secondary hover:text-text-primary"}`}>
+                    <Edit3 className="w-3 h-3" />Write
+                  </button>
+                  <button onClick={() => setEditMode("upload")}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${editMode === "upload" ? "bg-accent text-white" : "text-text-secondary hover:text-text-primary"}`}>
+                    <Upload className="w-3 h-3" />Upload
+                  </button>
+                </div>
+
+                {editMode === "write" && (
+                  <div className="border border-border rounded-lg overflow-hidden h-52">
+                    <FountainEditor
+                      value={sceneText}
+                      onChange={setSceneText}
+                      placeholder={`INT. COFFEE SHOP - DAY\n\nA quiet morning. Steam rises.\n\nSARAH\n(nervously)\nI need to tell you something.`}
+                    />
+                  </div>
+                )}
+
+                {editMode === "upload" && (
+                  <>
+                    {fileUrl ? (
+                      <div className="flex items-center gap-3 p-3 bg-bg-primary border border-border rounded-xl">
+                        <FileText className="w-6 h-6 text-accent shrink-0" />
+                        <p className="flex-1 text-text-primary font-medium text-sm truncate">{fileName}</p>
+                        <button onClick={() => { setFileUrl(""); setFileName(""); }} className="text-text-muted hover:text-danger">
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                    ) : (
+                      <label className="flex flex-col items-center justify-center gap-2 p-6 border-2 border-dashed border-border hover:border-accent rounded-xl cursor-pointer transition-colors group">
+                        <Upload className="w-6 h-6 text-text-muted group-hover:text-accent transition-colors" />
+                        <p className="text-text-secondary text-sm group-hover:text-accent transition-colors">
+                          {fileUploading ? "Uploading..." : "Click to upload PDF, DOC, or DOCX"}
+                        </p>
+                        <input type="file"
+                          accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                          onChange={handleFileUploadModal} className="hidden" disabled={fileUploading} />
+                      </label>
+                    )}
+                  </>
+                )}
+              </div>
+            </>
           )}
-          {scene.scene_file_url && !isPdf && !isDocx && (
-            <a href={scene.scene_file_url} target="_blank" rel="noopener noreferrer"
-              className="flex items-center gap-2 text-sm text-accent hover:text-accent-hover p-4 rounded-xl border border-border bg-bg-primary hover:bg-accent/5 transition-colors">
-              <FileText className="w-5 h-5" /><span>Download {fileName || "file"}</span>
-            </a>
-          )}
-          {!hasContent && (
-            <div className="flex flex-col items-center justify-center py-12 text-center">
-              <Film className="w-10 h-10 text-text-muted mb-3" />
-              <p className="text-text-muted text-sm">No scene content yet</p>
-            </div>
+
+          {/* View mode: scene content */}
+          {!editing && (
+            <>
+              {scene.scene_text && (
+                <div className="rounded-xl bg-bg-primary border border-border p-5">
+                  <FountainPreview text={scene.scene_text} />
+                </div>
+              )}
+              {scene.scene_file_url && isPdf && (
+                <iframe src={scene.scene_file_url} className="w-full min-h-[50vh] rounded-xl border border-border" title={scene.scene_file_name || "Scene file"} />
+              )}
+              {scene.scene_file_url && isDocx && (
+                <div className="rounded-xl bg-bg-primary border border-border p-5">
+                  {loadingDocx ? (
+                    <div className="flex items-center justify-center py-12 gap-2 text-text-muted">
+                      <Loader2 className="w-5 h-5 animate-spin" />Loading document...
+                    </div>
+                  ) : docxHtml ? (
+                    <div className="prose prose-sm max-w-none text-text-primary" dangerouslySetInnerHTML={{ __html: docxHtml }} />
+                  ) : null}
+                </div>
+              )}
+              {scene.scene_file_url && !isPdf && !isDocx && (
+                <a href={scene.scene_file_url} target="_blank" rel="noopener noreferrer"
+                  className="flex items-center gap-2 text-sm text-accent hover:text-accent-hover p-4 rounded-xl border border-border bg-bg-primary hover:bg-accent/5 transition-colors">
+                  <FileText className="w-5 h-5" /><span>Download {displayFileName || "file"}</span>
+                </a>
+              )}
+              {!hasContent && (
+                <div className="flex flex-col items-center justify-center py-12 text-center">
+                  <Film className="w-10 h-10 text-text-muted mb-3" />
+                  <p className="text-text-muted text-sm">No scene content yet</p>
+                  {canEdit && (
+                    <button onClick={() => setEditing(true)}
+                      className="mt-3 flex items-center gap-1.5 text-sm text-accent hover:text-accent-hover transition-colors">
+                      <Edit3 className="w-3.5 h-3.5" />Add Content
+                    </button>
+                  )}
+                </div>
+              )}
+            </>
           )}
         </div>
+
+        {/* Footer actions */}
+        {canEdit && (
+          <div className="px-5 py-3.5 border-t border-border shrink-0 flex items-center gap-2">
+            {editing ? (
+              <>
+                <button onClick={handleSave} disabled={saving}
+                  className="flex items-center gap-2 bg-accent hover:bg-accent-hover disabled:opacity-40 text-white rounded-lg px-4 py-2 text-sm font-medium transition-colors">
+                  {saving && <Loader2 className="w-3.5 h-3.5 animate-spin" />}Save
+                </button>
+                <button onClick={() => {
+                  setEditing(false);
+                  setTitle(scene.title || "");
+                  setLocationId(scene.location_id || "");
+                  setDurationH(Math.floor(scene.duration_minutes / 60));
+                  setDurationM(scene.duration_minutes % 60);
+                  setSceneText(scene.scene_text || "");
+                  setFileUrl(scene.scene_file_url || "");
+                  setFileName(scene.scene_file_name || "");
+                  setEditMode(scene.scene_file_url ? "upload" : "write");
+                }} className="text-sm text-text-secondary hover:text-text-primary transition-colors px-3 py-2">
+                  Cancel
+                </button>
+              </>
+            ) : (
+              <>
+                <button onClick={() => setEditing(true)}
+                  className="flex items-center gap-1.5 text-sm text-accent hover:text-accent-hover font-medium transition-colors">
+                  <Edit3 className="w-3.5 h-3.5" />Edit Scene
+                </button>
+                <div className="ml-auto">
+                  {confirmDelete ? (
+                    <div className="flex items-center gap-2 text-sm">
+                      <span className="text-text-secondary">Delete this scene?</span>
+                      <button onClick={handleDelete} disabled={deleting}
+                        className="text-danger hover:text-danger-hover font-medium flex items-center gap-1">
+                        {deleting && <Loader2 className="w-3 h-3 animate-spin" />}Yes, delete
+                      </button>
+                      <button onClick={() => setConfirmDelete(false)} className="text-text-secondary hover:text-text-primary">Cancel</button>
+                    </div>
+                  ) : (
+                    <button onClick={() => setConfirmDelete(true)}
+                      className="text-text-muted hover:text-danger transition-colors p-1.5 hover:bg-bg-card-hover rounded-lg">
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  )}
+                </div>
+              </>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
@@ -636,9 +869,17 @@ export default function ScenesView({ projectId, canEdit }: Props) {
         </div>
       )}
 
-      {/* Scene viewer modal */}
+      {/* Scene detail modal */}
       {viewingScene && (
-        <SceneViewerModal scene={viewingScene} onClose={() => setViewingScene(null)} />
+        <SceneDetailModal
+          scene={viewingScene}
+          projectId={projectId}
+          locations={locations}
+          canEdit={canEdit}
+          onClose={() => setViewingScene(null)}
+          onSaved={() => { setViewingScene(null); fetchScenes(); }}
+          onDeleted={() => { setViewingScene(null); fetchScenes(); }}
+        />
       )}
     </div>
   );
