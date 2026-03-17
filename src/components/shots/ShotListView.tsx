@@ -235,7 +235,7 @@ export default function ShotListView({ projectId, canEdit, currentUserId }: Prop
             >
               <option value="all">All Locations</option>
               {locations.map((loc) => (
-                <option key={loc.id} value={loc.id}>{loc.name}</option>
+                <option key={loc.id} value={loc.id}>{loc.name}{loc.day_number != null ? ` (Day ${loc.day_number})` : ""}</option>
               ))}
             </select>
           )}

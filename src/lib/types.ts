@@ -53,6 +53,7 @@ export interface Location {
   break_after_minutes: number;
   completed: boolean;
   created_at: string;
+  day_number?: number | null;
   scenes?: Scene[];
 }
 

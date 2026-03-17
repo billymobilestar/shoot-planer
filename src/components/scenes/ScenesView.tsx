@@ -215,7 +215,7 @@ function SceneDetailModal({ scene, projectId, locations, canEdit, onClose, onSav
                   <select value={locationId} onChange={(e) => setLocationId(e.target.value)}
                     className="w-full bg-bg-input border border-border rounded-lg px-3 py-2 text-text-primary text-sm focus:outline-none focus:border-accent">
                     <option value="">Unassigned</option>
-                    {locations.map((loc) => <option key={loc.id} value={loc.id}>{loc.name}</option>)}
+                    {locations.map((loc) => <option key={loc.id} value={loc.id}>{loc.name}{loc.day_number != null ? ` (Day ${loc.day_number})` : ""}</option>)}
                   </select>
                 </div>
                 <div>
@@ -571,7 +571,7 @@ export default function ScenesView({ projectId, canEdit }: Props) {
           >
             <option value="">Unassigned</option>
             {locations.map((loc) => (
-              <option key={loc.id} value={loc.id}>{loc.name}</option>
+              <option key={loc.id} value={loc.id}>{loc.name}{loc.day_number != null ? ` (Day ${loc.day_number})` : ""}</option>
             ))}
           </select>
         </div>

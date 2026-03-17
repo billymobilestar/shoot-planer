@@ -316,7 +316,7 @@ export default function ReferencesView({ projectId, canEdit }: Props) {
                             {sel && <Check className="w-3 h-3 text-white" />}
                           </div>
                           <MapPin className={`w-3.5 h-3.5 shrink-0 ${sel ? "text-accent" : "text-text-muted"}`} />
-                          <span className="truncate">{loc.name}</span>
+                          <span className="truncate">{loc.name}{loc.day_number != null ? ` (Day ${loc.day_number})` : ""}</span>
                         </button>
                       );
                     })}
@@ -419,7 +419,7 @@ export default function ReferencesView({ projectId, canEdit }: Props) {
                 <div key={loc.id}>
                   <div className="flex items-center gap-2 mb-3">
                     <MapPin className="w-4 h-4 text-accent" />
-                    <h3 className="text-sm font-semibold text-text-primary">{loc.name}</h3>
+                    <h3 className="text-sm font-semibold text-text-primary">{loc.name}{loc.day_number != null ? ` (Day ${loc.day_number})` : ""}</h3>
                     <span className="text-xs text-text-muted">({items.length})</span>
                     <div className="flex-1 border-t border-border ml-2" />
                   </div>

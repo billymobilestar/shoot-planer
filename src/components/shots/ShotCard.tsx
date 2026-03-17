@@ -559,7 +559,7 @@ export default function ShotCard({ shot, locations, references, canEdit, project
                 className="w-full bg-bg-input border border-border rounded-lg px-3 py-2 text-text-primary text-sm focus:outline-none focus:border-accent"
               >
                 <option value="">Assign to location</option>
-                {locations.map((loc) => <option key={loc.id} value={loc.id}>{loc.name}</option>)}
+                {locations.map((loc) => <option key={loc.id} value={loc.id}>{loc.name}{loc.day_number != null ? ` (Day ${loc.day_number})` : ""}</option>)}
               </select>
               {form.location_id && scenes.length > 0 && (
                 <select

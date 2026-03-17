@@ -297,7 +297,7 @@ export default function ReferenceCard({ reference, locations, boards, canEdit, p
                         <div className={`w-3.5 h-3.5 rounded border flex items-center justify-center shrink-0 ${sel ? "bg-accent border-accent" : "border-border"}`}>
                           {sel && <Check className="w-2.5 h-2.5 text-white" />}
                         </div>
-                        {loc.name}
+                        {loc.name}{loc.day_number != null ? ` (Day ${loc.day_number})` : ""}
                       </button>
                     );
                   })}
@@ -346,7 +346,7 @@ export default function ReferenceCard({ reference, locations, boards, canEdit, p
                   {assignedLocations.map((loc) => (
                     <span key={loc.id} className="inline-flex items-center gap-1 text-xs text-accent bg-accent/10 border border-accent/20 px-2.5 py-1 rounded-lg font-medium">
                       <MapPin className="w-3 h-3" />
-                      {loc.name}
+                      {loc.name}{loc.day_number != null ? ` (Day ${loc.day_number})` : ""}
                       {canEdit && (
                         <button onClick={() => quickToggleLocation(loc.id)} className="hover:text-red-400 ml-0.5 transition-colors">
                           <X className="w-3 h-3" />
@@ -400,7 +400,7 @@ export default function ReferenceCard({ reference, locations, boards, canEdit, p
                               {sel && <Check className="w-3 h-3 text-white" />}
                             </div>
                             <MapPin className={`w-3.5 h-3.5 shrink-0 ${sel ? "text-accent" : "text-text-muted"}`} />
-                            <span className="text-sm truncate">{loc.name}</span>
+                            <span className="text-sm truncate">{loc.name}{loc.day_number != null ? ` (Day ${loc.day_number})` : ""}</span>
                             {loc.address && (
                               <span className="text-[10px] text-text-muted ml-auto truncate max-w-20 shrink-0">{loc.address}</span>
                             )}

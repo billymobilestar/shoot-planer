@@ -511,7 +511,7 @@ export default function AddReferenceModal({ projectId, locations, boards, onCrea
                         {selected && <Check className="w-3 h-3 text-white" />}
                       </div>
                       <MapPin className="w-3 h-3 text-text-muted shrink-0" />
-                      {loc.name}
+                      {loc.name}{loc.day_number != null ? ` (Day ${loc.day_number})` : ""}
                     </button>
                   );
                 })}
@@ -525,7 +525,7 @@ export default function AddReferenceModal({ projectId, locations, boards, onCrea
                   return (
                     <span key={id} className="inline-flex items-center gap-1 bg-accent-muted text-accent text-xs px-2 py-0.5 rounded-full">
                       <MapPin className="w-2.5 h-2.5" />
-                      {loc.name}
+                      {loc.name}{loc.day_number != null ? ` (Day ${loc.day_number})` : ""}
                       <button type="button" onClick={() => toggleLocation(id)}>
                         <X className="w-3 h-3" />
                       </button>

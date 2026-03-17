@@ -123,7 +123,7 @@ export default function AddShotModal({ projectId, locations, references, onCreat
                 className="w-full bg-bg-input border border-border rounded-lg px-4 py-2.5 text-text-primary focus:outline-none focus:border-accent"
               >
                 <option value="">None</option>
-                {locations.map((loc) => <option key={loc.id} value={loc.id}>{loc.name}</option>)}
+                {locations.map((loc) => <option key={loc.id} value={loc.id}>{loc.name}{loc.day_number != null ? ` (Day ${loc.day_number})` : ""}</option>)}
               </select>
             </div>
           </div>

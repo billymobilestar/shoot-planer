@@ -13,12 +13,20 @@ export async function GET(request: Request, { params }: { params: Promise<{ proj
 
   const { data, error } = await supabase
     .from("locations")
-    .select("*")
+    .select("*, shoot_days!inner(day_number)")
     .eq("project_id", projectId)
     .order("position");
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  return NextResponse.json(data);
+
+  // Flatten day_number onto each location for easy use in dropdowns
+  const enriched = (data || []).map((loc: any) => ({
+    ...loc,
+    day_number: loc.shoot_days?.day_number ?? null,
+    shoot_days: undefined,
+  }));
+
+  return NextResponse.json(enriched);
 }
 
 export async function POST(request: Request, { params }: { params: Promise<{ projectId: string }> }) {
