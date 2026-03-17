@@ -307,6 +307,27 @@ alter table notifications enable row level security;
 create policy "allow_all_notifications" on notifications for all using (true) with check (true);
 
 -- ============================================
+-- PROJECT MESSAGES (Group Chat)
+-- ============================================
+create table project_messages (
+  id uuid primary key default uuid_generate_v4(),
+  project_id uuid references projects(id) on delete cascade not null,
+  user_id text not null,
+  user_name text,
+  user_avatar_url text,
+  content text not null,
+  created_at timestamptz default now()
+);
+
+create index idx_messages_project on project_messages(project_id, created_at desc);
+
+alter table project_messages enable row level security;
+create policy "allow_all_messages" on project_messages for all using (true) with check (true);
+
+-- Add chat_message to notification_type enum (run if you already have the enum):
+-- ALTER TYPE notification_type ADD VALUE IF NOT EXISTS 'chat_message';
+
+-- ============================================
 -- STORAGE BUCKET for images
 -- ============================================
 -- Run these in Supabase Dashboard > Storage:

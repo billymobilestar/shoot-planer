@@ -9,6 +9,7 @@ import ItineraryView from "@/components/itinerary/ItineraryView";
 import ReferencesView from "@/components/references/ReferencesView";
 import ShotListView from "@/components/shots/ShotListView";
 import TeamView from "@/components/team/TeamView";
+import ChatBox from "@/components/chat/ChatBox";
 
 interface ProjectData extends Project {
   role: "owner" | "admin" | "viewer";
@@ -373,6 +374,8 @@ export default function ProjectPage({ params }: { params: Promise<{ projectId: s
       {activeTab === "references" && <ReferencesView projectId={projectId} canEdit={canEdit} />}
       {activeTab === "shots" && <ShotListView projectId={projectId} canEdit={canEdit} currentUserId={currentUserId} />}
       {activeTab === "team" && <TeamView projectId={projectId} canEdit={canEdit} isOwner={project.role === "owner"} />}
+
+      <ChatBox projectId={projectId} />
     </div>
   );
 }

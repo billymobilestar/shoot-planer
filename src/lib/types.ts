@@ -178,7 +178,18 @@ export type NotificationType =
   | "location_updated"
   | "shot_status_changed"
   | "day_added"
-  | "reference_location_assigned";
+  | "reference_location_assigned"
+  | "chat_message";
+
+export interface ChatMessage {
+  id: string;
+  project_id: string;
+  user_id: string;
+  user_name: string | null;
+  user_avatar_url: string | null;
+  content: string;
+  created_at: string;
+}
 
 export interface Notification {
   id: string;
