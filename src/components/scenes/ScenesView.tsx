@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { Film, Clock, MapPin, ListChecks, ChevronDown, X, FileText, Loader2, Search, Plus, Upload, Edit3, Trash2, Printer, Download } from "lucide-react";
+import { Film, Clock, MapPin, ListChecks, ChevronDown, ChevronUp, X, FileText, Loader2, Search, Plus, Upload, Edit3, Trash2, Printer, Download } from "lucide-react";
 import { parseFountain, applyInlineFormatting } from "@/lib/fountain";
 import type { FountainElement } from "@/lib/fountain";
 import FountainEditor from "@/components/itinerary/FountainEditor";
@@ -11,6 +11,7 @@ type EditMode = "write" | "upload";
 
 interface EnrichedScene extends Scene {
   location_name: string | null;
+  shoot_day_id: string | null;
   day_number: number | null;
   day_title: string | null;
   shot_count: number;
@@ -412,6 +413,39 @@ export default function ScenesView({ projectId, canEdit }: Props) {
     }
     setLoading(false);
   }, [projectId]);
+
+  const handleShiftDay = useCallback(async (dayNumber: number, direction: "up" | "down") => {
+    const dayGroups = scenes
+      .filter((s) => s.day_number != null)
+      .reduce<Record<number, string>>((acc, s) => {
+        if (s.day_number != null && s.shoot_day_id && !acc[s.day_number]) {
+          acc[s.day_number] = s.shoot_day_id;
+        }
+        return acc;
+      }, {});
+
+    const sortedDayNumbers = Object.keys(dayGroups).map(Number).sort((a, b) => a - b);
+    const idx = sortedDayNumbers.indexOf(dayNumber);
+    const neighborIdx = direction === "up" ? idx - 1 : idx + 1;
+    if (neighborIdx < 0 || neighborIdx >= sortedDayNumbers.length) return;
+
+    const neighborDayNumber = sortedDayNumbers[neighborIdx];
+    const currentId = dayGroups[dayNumber];
+    const neighborId = dayGroups[neighborDayNumber];
+
+    await fetch(`/api/projects/${projectId}/days/reorder`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        updates: [
+          { id: currentId, day_number: neighborDayNumber },
+          { id: neighborId, day_number: dayNumber },
+        ],
+      }),
+    });
+
+    await fetchScenes();
+  }, [scenes, projectId, fetchScenes]);
 
   const fetchLocations = useCallback(async () => {
     const res = await fetch(`/api/projects/${projectId}/locations`);
@@ -858,6 +892,11 @@ export default function ScenesView({ projectId, canEdit }: Props) {
       <div className="space-y-4">
         {groups.map((group) => {
           const groupDuration = group.scenes.reduce((sum, s) => sum + (s.duration_minutes || 0), 0);
+          const isDayGroup = groupBy === "day" && group.key !== "unassigned";
+          const dayGroups = groups.filter((g) => g.key !== "unassigned");
+          const dayGroupIdx = dayGroups.indexOf(group);
+          const isFirst = dayGroupIdx === 0;
+          const isLast = dayGroupIdx === dayGroups.length - 1;
 
           return (
             <div key={group.key} className="bg-bg-card border border-border rounded-xl overflow-hidden">
@@ -882,6 +921,26 @@ export default function ScenesView({ projectId, canEdit }: Props) {
                     <span className="text-xs font-medium text-accent bg-accent/10 rounded-full px-2 py-0.5">
                       {fmtMins(groupDuration)}
                     </span>
+                  )}
+                  {isDayGroup && canEdit && (
+                    <>
+                      <button
+                        onClick={() => handleShiftDay(group.scenes[0].day_number!, "up")}
+                        disabled={isFirst}
+                        className="p-1.5 text-text-muted hover:text-accent hover:bg-accent/10 rounded-lg transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                        title="Move day earlier"
+                      >
+                        <ChevronUp className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        onClick={() => handleShiftDay(group.scenes[0].day_number!, "down")}
+                        disabled={isLast}
+                        className="p-1.5 text-text-muted hover:text-accent hover:bg-accent/10 rounded-lg transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                        title="Move day later"
+                      >
+                        <ChevronDown className="w-3.5 h-3.5" />
+                      </button>
+                    </>
                   )}
                   {group.scenes.some((s) => s.scene_text || s.scene_file_url) && (
                     <button
@@ -945,7 +1004,9 @@ export default function ScenesView({ projectId, canEdit }: Props) {
                           </span>
                         )}
                         {(scene.scene_text || scene.scene_file_url) && (
-                          <button
+                          <div
+                            role="button"
+                            tabIndex={0}
                             onClick={(e) => {
                               e.stopPropagation();
                               if (scene.scene_file_url && !scene.scene_text) {
@@ -960,11 +1021,11 @@ export default function ScenesView({ projectId, canEdit }: Props) {
                                 printOrDownloadScenes([scene], scene.title || "Scene");
                               }
                             }}
-                            className="p-1 text-text-muted hover:text-accent opacity-0 group-hover:opacity-100 transition-all"
+                            className="p-1 text-text-muted hover:text-accent opacity-0 group-hover:opacity-100 transition-all cursor-pointer"
                             title={scene.scene_file_url && !scene.scene_text ? "Download file" : "Print scene"}
                           >
                             {scene.scene_file_url && !scene.scene_text ? <Download className="w-3.5 h-3.5" /> : <Printer className="w-3.5 h-3.5" />}
-                          </button>
+                          </div>
                         )}
                         <ChevronDown className="w-4 h-4 text-text-muted opacity-0 group-hover:opacity-100 -rotate-90 transition-all" />
                       </div>

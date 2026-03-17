@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useDroppable } from "@dnd-kit/core";
 import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
-import { Plus, Trash2, Pencil, Check, X, MapPin, Clock, AlertTriangle, Coffee, ChevronDown, ChevronUp, FilmIcon, Car } from "lucide-react";
+import { Plus, Trash2, Pencil, Check, X, MapPin, Clock, AlertTriangle, Coffee, ChevronDown, ChevronUp, FilmIcon, Car, ArrowUp, ArrowDown } from "lucide-react";
 import { ShootDayWithLocations, Location } from "@/lib/types";
 import { useTracking } from "@/components/tracking/TrackingProvider";
 import LocationCard from "./LocationCard";
@@ -17,6 +17,9 @@ interface Props {
   projectId: string;
   onUpdate: () => void;
   onRequestDeleteDay?: () => void;
+  onShiftDay?: (direction: "up" | "down") => void;
+  isFirst?: boolean;
+  isLast?: boolean;
   dayDate?: string | null;
 }
 
@@ -38,7 +41,7 @@ function fmtMins(mins: number): string {
   return `${h}h ${m}m`;
 }
 
-export default function DayColumn({ day, canEdit, projectId, onUpdate, onRequestDeleteDay, dayDate }: Props) {
+export default function DayColumn({ day, canEdit, projectId, onUpdate, onRequestDeleteDay, onShiftDay, isFirst, isLast, dayDate }: Props) {
   const [expanded, setExpanded] = useState(true);
   const [editingTitle, setEditingTitle] = useState(false);
   const [titleValue, setTitleValue] = useState(day.title || "");
@@ -209,6 +212,26 @@ export default function DayColumn({ day, canEdit, projectId, onUpdate, onRequest
         </div>
 
         <div className="flex items-center gap-2 shrink-0" onClick={(e) => e.stopPropagation()}>
+          {canEdit && onShiftDay && (
+            <div className="flex items-center gap-1 bg-bg-input border border-border rounded-lg px-1 py-0.5">
+              <button
+                onClick={() => onShiftDay("up")}
+                disabled={isFirst}
+                className="p-1 text-text-secondary hover:text-accent hover:bg-accent/10 rounded transition-colors disabled:opacity-25 disabled:cursor-not-allowed"
+                title="Move day earlier"
+              >
+                <ArrowUp className="w-3.5 h-3.5" />
+              </button>
+              <button
+                onClick={() => onShiftDay("down")}
+                disabled={isLast}
+                className="p-1 text-text-secondary hover:text-accent hover:bg-accent/10 rounded transition-colors disabled:opacity-25 disabled:cursor-not-allowed"
+                title="Move day later"
+              >
+                <ArrowDown className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          )}
           {canEdit && onRequestDeleteDay && (
             <button onClick={onRequestDeleteDay} className="text-text-muted hover:text-danger transition-colors">
               <Trash2 className="w-4 h-4" />

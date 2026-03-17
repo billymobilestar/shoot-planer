@@ -120,6 +120,29 @@ export default function ItineraryView({ projectId, canEdit, startDate, onDaysCou
     setDeletedDay({ day: dayData, label });
   }
 
+  async function handleShiftDay(dayNumber: number, direction: "up" | "down") {
+    const visibleDays = days.filter((d) => d.id !== deletedDay?.day.id);
+    const idx = visibleDays.findIndex((d) => d.day_number === dayNumber);
+    const neighborIdx = direction === "up" ? idx - 1 : idx + 1;
+    if (neighborIdx < 0 || neighborIdx >= visibleDays.length) return;
+
+    const current = visibleDays[idx];
+    const neighbor = visibleDays[neighborIdx];
+
+    await fetch(`/api/projects/${projectId}/days/reorder`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        updates: [
+          { id: current.id, day_number: neighbor.day_number },
+          { id: neighbor.id, day_number: current.day_number },
+        ],
+      }),
+    });
+
+    fetchDays();
+  }
+
   async function handleClearDay(dayId: string) {
     setDayToDelete(null);
     await fetch(`/api/projects/${projectId}/days/${dayId}?mode=clear`, { method: "DELETE" });
@@ -465,6 +488,9 @@ export default function ItineraryView({ projectId, canEdit, startDate, onDaysCou
                   projectId={projectId}
                   onUpdate={fetchDays}
                   onRequestDeleteDay={canEdit ? () => openDeleteModal(day) : undefined}
+                  onShiftDay={canEdit ? (direction) => handleShiftDay(day.day_number, direction) : undefined}
+                  isFirst={dayIdx === 0}
+                  isLast={dayIdx === visibleDays.length - 1}
                   dayDate={startDate ? (() => {
                     const d = new Date(startDate + "T00:00:00");
                     d.setDate(d.getDate() + day.day_number - 1);
