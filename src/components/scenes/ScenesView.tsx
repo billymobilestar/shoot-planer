@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { Film, Clock, MapPin, ListChecks, ChevronDown, X, FileText, Loader2, Search, Plus, Upload, Edit3, Trash2 } from "lucide-react";
+import { Film, Clock, MapPin, ListChecks, ChevronDown, X, FileText, Loader2, Search, Plus, Upload, Edit3, Trash2, Printer, Download } from "lucide-react";
 import { parseFountain, applyInlineFormatting } from "@/lib/fountain";
 import type { FountainElement } from "@/lib/fountain";
 import FountainEditor from "@/components/itinerary/FountainEditor";
@@ -473,6 +473,79 @@ export default function ScenesView({ projectId, canEdit }: Props) {
     e.target.value = "";
   }
 
+  // Print text-based scenes in a new window, download file-based scenes
+  function printOrDownloadScenes(scenesToPrint: EnrichedScene[], label: string) {
+    const textScenes = scenesToPrint.filter((s) => s.scene_text);
+    const fileScenes = scenesToPrint.filter((s) => s.scene_file_url && !s.scene_text);
+
+    // Download file-based scenes
+    for (const s of fileScenes) {
+      const a = document.createElement("a");
+      a.href = s.scene_file_url!;
+      a.download = s.scene_file_name || "scene-file";
+      a.target = "_blank";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    }
+
+    // Print text-based scenes
+    if (textScenes.length > 0) {
+      const htmlParts = textScenes.map((s) => {
+        const elements = parseFountain(s.scene_text!);
+        const rendered = elements.map((el) => {
+          switch (el.type) {
+            case "scene_heading":
+              return `<p style="font-weight:bold;text-transform:uppercase;letter-spacing:0.05em;margin-top:1.5em;margin-bottom:0.25em;border-bottom:1px solid #ccc;padding-bottom:0.25em">${el.text}</p>`;
+            case "action":
+              return `<p style="margin:0.25em 0;line-height:1.6">${applyInlineFormatting(el.text!)}</p>`;
+            case "character":
+              return `<p style="margin-top:1em;margin-bottom:0;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;text-align:center">${el.text}</p>`;
+            case "parenthetical":
+              return `<p style="font-style:italic;text-align:center;font-size:0.9em;margin:0">${el.text}</p>`;
+            case "dialogue":
+              return `<p style="text-align:center;max-width:20em;margin:0.125em auto;line-height:1.6">${applyInlineFormatting(el.text!)}</p>`;
+            case "transition":
+              return `<p style="text-align:right;text-transform:uppercase;font-style:italic;font-size:0.9em;margin-top:1em">${el.text}</p>`;
+            case "centered":
+              return `<p style="text-align:center;margin:0.5em 0">${applyInlineFormatting(el.text!)}</p>`;
+            case "page_break":
+              return `<hr style="border:none;border-top:1px solid #ccc;margin:1em 0" />`;
+            case "blank":
+              return `<div style="height:0.5em"></div>`;
+            default:
+              return "";
+          }
+        }).join("\n");
+
+        return `<div style="margin-bottom:2em">
+          <h2 style="font-size:1.1em;margin-bottom:0.5em;padding-bottom:0.3em;border-bottom:2px solid #333">${s.title || "Untitled Scene"}${s.location_name ? ` — ${s.location_name}` : ""}${s.duration_minutes > 0 ? ` (${fmtMins(s.duration_minutes)})` : ""}</h2>
+          <div style="font-family:'Courier New',Courier,monospace;font-size:12px;line-height:1.5">${rendered}</div>
+        </div>`;
+      }).join('<div style="page-break-after:always"></div>');
+
+      const printWindow = window.open("", "_blank");
+      if (printWindow) {
+        printWindow.document.write(`<!DOCTYPE html><html><head><title>${label}</title>
+          <style>@media print { body { margin: 1in; } } body { font-family: 'Courier New', Courier, monospace; max-width: 800px; margin: 0 auto; padding: 2em; color: #111; }</style>
+        </head><body>
+          <h1 style="font-size:1.3em;margin-bottom:1.5em;text-align:center">${label}</h1>
+          ${htmlParts}
+        </body></html>`);
+        printWindow.document.close();
+        printWindow.onload = () => { printWindow.print(); };
+      }
+    }
+
+    // If only files and no text scenes, notify
+    if (textScenes.length === 0 && fileScenes.length > 0) {
+      // Files are downloading, no print window needed
+    }
+    if (textScenes.length === 0 && fileScenes.length === 0) {
+      alert("No scenes with content to print or download.");
+    }
+  }
+
   const filtered = scenes.filter((s) => {
     if (!search) return true;
     const q = search.toLowerCase();
@@ -757,6 +830,16 @@ export default function ScenesView({ projectId, canEdit }: Props) {
             <Clock className="w-3.5 h-3.5 inline mr-1" />Day
           </button>
         </div>
+        {filtered.some((s) => s.scene_text || s.scene_file_url) && (
+          <button
+            onClick={() => printOrDownloadScenes(filtered, "All Scenes")}
+            className="flex items-center gap-2 bg-bg-card border border-border hover:border-accent text-text-secondary hover:text-accent rounded-xl px-3 py-2.5 text-sm font-medium transition-colors shrink-0"
+            title="Print / download all scenes"
+          >
+            <Printer className="w-4 h-4" />
+            <span className="hidden sm:inline">Print All</span>
+          </button>
+        )}
         {canEdit && (
           <button
             onClick={() => setAdding(true)}
@@ -793,12 +876,21 @@ export default function ScenesView({ projectId, canEdit }: Props) {
                     )}
                   </div>
                 </div>
-                <div className="flex items-center gap-3 shrink-0">
+                <div className="flex items-center gap-2 shrink-0">
                   <span className="text-xs text-text-muted">{group.scenes.length} scene{group.scenes.length !== 1 ? "s" : ""}</span>
                   {groupDuration > 0 && (
                     <span className="text-xs font-medium text-accent bg-accent/10 rounded-full px-2 py-0.5">
                       {fmtMins(groupDuration)}
                     </span>
+                  )}
+                  {group.scenes.some((s) => s.scene_text || s.scene_file_url) && (
+                    <button
+                      onClick={() => printOrDownloadScenes(group.scenes, group.label)}
+                      className="p-1.5 text-text-muted hover:text-accent hover:bg-accent/10 rounded-lg transition-colors"
+                      title={`Print / download ${group.label} scenes`}
+                    >
+                      <Printer className="w-3.5 h-3.5" />
+                    </button>
                   )}
                 </div>
               </div>
@@ -851,6 +943,28 @@ export default function ScenesView({ projectId, canEdit }: Props) {
                           <span className="text-xs text-warning/70 bg-warning/10 rounded-full px-2 py-0.5">
                             No duration
                           </span>
+                        )}
+                        {(scene.scene_text || scene.scene_file_url) && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (scene.scene_file_url && !scene.scene_text) {
+                                const a = document.createElement("a");
+                                a.href = scene.scene_file_url;
+                                a.download = scene.scene_file_name || "scene-file";
+                                a.target = "_blank";
+                                document.body.appendChild(a);
+                                a.click();
+                                document.body.removeChild(a);
+                              } else {
+                                printOrDownloadScenes([scene], scene.title || "Scene");
+                              }
+                            }}
+                            className="p-1 text-text-muted hover:text-accent opacity-0 group-hover:opacity-100 transition-all"
+                            title={scene.scene_file_url && !scene.scene_text ? "Download file" : "Print scene"}
+                          >
+                            {scene.scene_file_url && !scene.scene_text ? <Download className="w-3.5 h-3.5" /> : <Printer className="w-3.5 h-3.5" />}
+                          </button>
                         )}
                         <ChevronDown className="w-4 h-4 text-text-muted opacity-0 group-hover:opacity-100 -rotate-90 transition-all" />
                       </div>
