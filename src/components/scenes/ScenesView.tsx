@@ -1,10 +1,13 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { Film, Clock, MapPin, ListChecks, ChevronDown, X, FileText, Loader2, Search, Plus } from "lucide-react";
+import { Film, Clock, MapPin, ListChecks, ChevronDown, X, FileText, Loader2, Search, Plus, Upload, Edit3 } from "lucide-react";
 import { parseFountain, applyInlineFormatting } from "@/lib/fountain";
 import type { FountainElement } from "@/lib/fountain";
+import FountainEditor from "@/components/itinerary/FountainEditor";
 import type { Scene, Location } from "@/lib/types";
+
+type EditMode = "write" | "upload";
 
 interface EnrichedScene extends Scene {
   location_name: string | null;
@@ -161,7 +164,12 @@ export default function ScenesView({ projectId, canEdit }: Props) {
   const [viewingScene, setViewingScene] = useState<EnrichedScene | null>(null);
   const [adding, setAdding] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [newScene, setNewScene] = useState({ title: "", location_id: "", duration_h: 0, duration_m: 0 });
+  const [uploading, setUploading] = useState(false);
+  const [editMode, setEditMode] = useState<EditMode>("write");
+  const [newScene, setNewScene] = useState({
+    title: "", location_id: "", duration_h: 0, duration_m: 0,
+    scene_text: "", scene_file_url: "", scene_file_name: "",
+  });
 
   const fetchScenes = useCallback(async () => {
     const res = await fetch(`/api/projects/${projectId}/scenes`);
@@ -185,22 +193,51 @@ export default function ScenesView({ projectId, canEdit }: Props) {
     fetchLocations();
   }, [fetchScenes, fetchLocations]);
 
+  const defaultNewScene = { title: "", location_id: "", duration_h: 0, duration_m: 0, scene_text: "", scene_file_url: "", scene_file_name: "" };
+
+  function resetForm() {
+    setNewScene(defaultNewScene);
+    setEditMode("write");
+    setAdding(false);
+  }
+
   async function addScene() {
     setSaving(true);
     const duration = (newScene.duration_h * 60) + newScene.duration_m;
+    const body: Record<string, unknown> = {
+      title: newScene.title.trim() || null,
+      location_id: newScene.location_id || null,
+      duration_minutes: duration,
+    };
+    if (editMode === "write") {
+      body.scene_text = newScene.scene_text || null;
+    } else {
+      body.scene_file_url = newScene.scene_file_url || null;
+      body.scene_file_name = newScene.scene_file_name || null;
+    }
     await fetch(`/api/projects/${projectId}/scenes`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        title: newScene.title.trim() || null,
-        location_id: newScene.location_id || null,
-        duration_minutes: duration,
-      }),
+      body: JSON.stringify(body),
     });
-    setNewScene({ title: "", location_id: "", duration_h: 0, duration_m: 0 });
-    setAdding(false);
+    resetForm();
     setSaving(false);
     await fetchScenes();
+  }
+
+  async function handleFileUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    const fd = new FormData();
+    fd.append("file", file);
+    const res = await fetch("/api/upload", { method: "POST", body: fd });
+    if (res.ok) {
+      const { url } = await res.json();
+      setNewScene((f) => ({ ...f, scene_file_url: url, scene_file_name: file.name }));
+    }
+    setUploading(false);
+    e.target.value = "";
   }
 
   const filtered = scenes.filter((s) => {
@@ -273,6 +310,123 @@ export default function ScenesView({ projectId, canEdit }: Props) {
     }
   }
 
+  const addSceneForm = (
+    <div className="bg-bg-card border border-accent/30 rounded-xl p-5 space-y-4">
+      <div className="flex items-center gap-2 mb-1">
+        <div className="w-8 h-8 rounded-lg bg-accent/10 flex items-center justify-center">
+          <Film className="w-4 h-4 text-accent" />
+        </div>
+        <h3 className="text-sm font-semibold text-text-primary">New Scene</h3>
+      </div>
+
+      <input
+        value={newScene.title}
+        onChange={(e) => setNewScene((f) => ({ ...f, title: e.target.value }))}
+        placeholder="Scene title (e.g. INT. COFFEE SHOP - DAY)"
+        className="w-full bg-bg-input border border-border rounded-lg px-3 py-2.5 text-text-primary text-sm focus:outline-none focus:border-accent"
+        autoFocus
+        onKeyDown={(e) => { if (e.key === "Escape") resetForm(); }}
+      />
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div>
+          <label className="block text-xs text-text-muted mb-1.5 font-medium">Location (optional)</label>
+          <select
+            value={newScene.location_id}
+            onChange={(e) => setNewScene((f) => ({ ...f, location_id: e.target.value }))}
+            className="w-full bg-bg-input border border-border rounded-lg px-3 py-2.5 text-text-primary text-sm focus:outline-none focus:border-accent"
+          >
+            <option value="">Unassigned</option>
+            {locations.map((loc) => (
+              <option key={loc.id} value={loc.id}>{loc.name}</option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label className="block text-xs text-text-muted mb-1.5 font-medium">Duration (optional)</label>
+          <div className="flex items-center gap-1.5">
+            <input type="number" min="0" value={newScene.duration_h || ""} placeholder="0"
+              onChange={(e) => setNewScene((f) => ({ ...f, duration_h: parseInt(e.target.value) || 0 }))}
+              className="w-14 bg-bg-input border border-border rounded-lg px-2 py-2.5 text-text-primary text-sm focus:outline-none focus:border-accent text-center"
+            />
+            <span className="text-xs text-text-muted">h</span>
+            <input type="number" min="0" max="59" value={newScene.duration_m || ""} placeholder="0"
+              onChange={(e) => setNewScene((f) => ({ ...f, duration_m: Math.min(59, parseInt(e.target.value) || 0) }))}
+              className="w-14 bg-bg-input border border-border rounded-lg px-2 py-2.5 text-text-primary text-sm focus:outline-none focus:border-accent text-center"
+            />
+            <span className="text-xs text-text-muted">m</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Content mode tabs */}
+      <div>
+        <label className="block text-xs text-text-muted mb-1.5 font-medium">Scene Content (optional)</label>
+        <div className="flex items-center gap-1 mb-3">
+          <button onClick={() => setEditMode("write")}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${editMode === "write" ? "bg-accent text-white" : "text-text-secondary hover:text-text-primary"}`}
+          >
+            <Edit3 className="w-3 h-3" />Write
+          </button>
+          <button onClick={() => setEditMode("upload")}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${editMode === "upload" ? "bg-accent text-white" : "text-text-secondary hover:text-text-primary"}`}
+          >
+            <Upload className="w-3 h-3" />Upload
+          </button>
+        </div>
+
+        {editMode === "write" && (
+          <div className="border border-border rounded-lg overflow-hidden h-56">
+            <FountainEditor
+              value={newScene.scene_text}
+              onChange={(v) => setNewScene((f) => ({ ...f, scene_text: v }))}
+              placeholder={`INT. COFFEE SHOP - DAY\n\nA quiet morning. Steam rises.\n\nSARAH\n(nervously)\nI need to tell you something.`}
+            />
+          </div>
+        )}
+
+        {editMode === "upload" && (
+          <>
+            {newScene.scene_file_url ? (
+              <div className="flex items-center gap-3 p-3 bg-bg-primary border border-border rounded-xl">
+                <FileText className="w-6 h-6 text-accent shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-text-primary font-medium text-sm truncate">{newScene.scene_file_name}</p>
+                </div>
+                <button onClick={() => setNewScene((f) => ({ ...f, scene_file_url: "", scene_file_name: "" }))} className="text-text-muted hover:text-danger">
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            ) : (
+              <label className="flex flex-col items-center justify-center gap-2 p-6 border-2 border-dashed border-border hover:border-accent rounded-xl cursor-pointer transition-colors group">
+                <Upload className="w-6 h-6 text-text-muted group-hover:text-accent transition-colors" />
+                <p className="text-text-secondary text-sm group-hover:text-accent transition-colors">
+                  {uploading ? "Uploading..." : "Click to upload PDF, DOC, or DOCX"}
+                </p>
+                <input type="file"
+                  accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                  onChange={handleFileUpload} className="hidden" disabled={uploading}
+                />
+              </label>
+            )}
+          </>
+        )}
+      </div>
+
+      <div className="flex items-center gap-2 pt-1">
+        <button onClick={addScene} disabled={saving}
+          className="flex items-center gap-2 bg-accent hover:bg-accent-hover disabled:opacity-40 text-white rounded-lg px-4 py-2 text-sm font-medium transition-colors"
+        >
+          {saving && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+          Add Scene
+        </button>
+        <button onClick={resetForm} className="text-sm text-text-secondary hover:text-text-primary transition-colors px-3 py-2">
+          Cancel
+        </button>
+      </div>
+    </div>
+  );
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20 gap-3 text-text-muted">
@@ -282,24 +436,29 @@ export default function ScenesView({ projectId, canEdit }: Props) {
     );
   }
 
-  if (scenes.length === 0 && !adding) {
+  if (scenes.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center py-20 text-center">
-        <div className="w-16 h-16 rounded-2xl bg-accent/10 flex items-center justify-center mb-4">
-          <Film className="w-8 h-8 text-accent" />
-        </div>
-        <h3 className="text-lg font-semibold text-text-primary mb-1">No scenes yet</h3>
-        <p className="text-text-muted text-sm max-w-sm mb-4">
-          Add scenes to plan your shoot. You can assign them to locations now or later.
-        </p>
-        {canEdit && (
-          <button
-            onClick={() => setAdding(true)}
-            className="flex items-center gap-2 bg-accent hover:bg-accent-hover text-white rounded-xl px-5 py-2.5 text-sm font-medium transition-colors"
-          >
-            <Plus className="w-4 h-4" />Add First Scene
-          </button>
+      <div className="space-y-4">
+        {!adding && (
+          <div className="flex flex-col items-center justify-center py-20 text-center">
+            <div className="w-16 h-16 rounded-2xl bg-accent/10 flex items-center justify-center mb-4">
+              <Film className="w-8 h-8 text-accent" />
+            </div>
+            <h3 className="text-lg font-semibold text-text-primary mb-1">No scenes yet</h3>
+            <p className="text-text-muted text-sm max-w-sm mb-4">
+              Add scenes to plan your shoot. You can assign them to locations now or later.
+            </p>
+            {canEdit && (
+              <button
+                onClick={() => setAdding(true)}
+                className="flex items-center gap-2 bg-accent hover:bg-accent-hover text-white rounded-xl px-5 py-2.5 text-sm font-medium transition-colors"
+              >
+                <Plus className="w-4 h-4" />Add First Scene
+              </button>
+            )}
+          </div>
         )}
+        {adding && addSceneForm}
       </div>
     );
   }
@@ -377,83 +536,7 @@ export default function ScenesView({ projectId, canEdit }: Props) {
       </div>
 
       {/* Add scene form */}
-      {adding && (
-        <div className="bg-bg-card border border-accent/30 rounded-xl p-5 space-y-4">
-          <div className="flex items-center gap-2 mb-1">
-            <div className="w-8 h-8 rounded-lg bg-accent/10 flex items-center justify-center">
-              <Film className="w-4 h-4 text-accent" />
-            </div>
-            <h3 className="text-sm font-semibold text-text-primary">New Scene</h3>
-          </div>
-
-          <input
-            value={newScene.title}
-            onChange={(e) => setNewScene((f) => ({ ...f, title: e.target.value }))}
-            placeholder="Scene title (e.g. INT. COFFEE SHOP - DAY)"
-            className="w-full bg-bg-input border border-border rounded-lg px-3 py-2.5 text-text-primary text-sm focus:outline-none focus:border-accent"
-            autoFocus
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && newScene.title.trim()) addScene();
-              if (e.key === "Escape") { setAdding(false); setNewScene({ title: "", location_id: "", duration_h: 0, duration_m: 0 }); }
-            }}
-          />
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
-              <label className="block text-xs text-text-muted mb-1.5 font-medium">Location (optional)</label>
-              <select
-                value={newScene.location_id}
-                onChange={(e) => setNewScene((f) => ({ ...f, location_id: e.target.value }))}
-                className="w-full bg-bg-input border border-border rounded-lg px-3 py-2.5 text-text-primary text-sm focus:outline-none focus:border-accent"
-              >
-                <option value="">Unassigned</option>
-                {locations.map((loc) => (
-                  <option key={loc.id} value={loc.id}>{loc.name}</option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-xs text-text-muted mb-1.5 font-medium">Duration (optional)</label>
-              <div className="flex items-center gap-1.5">
-                <input
-                  type="number" min="0"
-                  value={newScene.duration_h || ""}
-                  placeholder="0"
-                  onChange={(e) => setNewScene((f) => ({ ...f, duration_h: parseInt(e.target.value) || 0 }))}
-                  className="w-14 bg-bg-input border border-border rounded-lg px-2 py-2.5 text-text-primary text-sm focus:outline-none focus:border-accent text-center"
-                />
-                <span className="text-xs text-text-muted">h</span>
-                <input
-                  type="number" min="0" max="59"
-                  value={newScene.duration_m || ""}
-                  placeholder="0"
-                  onChange={(e) => setNewScene((f) => ({ ...f, duration_m: Math.min(59, parseInt(e.target.value) || 0) }))}
-                  className="w-14 bg-bg-input border border-border rounded-lg px-2 py-2.5 text-text-primary text-sm focus:outline-none focus:border-accent text-center"
-                />
-                <span className="text-xs text-text-muted">m</span>
-              </div>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2 pt-1">
-            <button
-              onClick={addScene}
-              disabled={saving}
-              className="flex items-center gap-2 bg-accent hover:bg-accent-hover disabled:opacity-40 text-white rounded-lg px-4 py-2 text-sm font-medium transition-colors"
-            >
-              {saving && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-              Add Scene
-            </button>
-            <button
-              onClick={() => { setAdding(false); setNewScene({ title: "", location_id: "", duration_h: 0, duration_m: 0 }); }}
-              className="text-sm text-text-secondary hover:text-text-primary transition-colors px-3 py-2"
-            >
-              Cancel
-            </button>
-          </div>
-        </div>
-      )}
+      {adding && addSceneForm}
 
       {/* Scene groups */}
       <div className="space-y-4">
