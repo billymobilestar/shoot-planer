@@ -39,7 +39,7 @@ export default function ShotListView({ projectId, canEdit, currentUserId }: Prop
   const [search, setSearch] = useState("");
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkApplying, setBulkApplying] = useState(false);
-  const [pendingDelete, setPendingDelete] = useState<{ id: string; title: string } | null>(null);
+  const [deletedShot, setDeletedShot] = useState<{ shot: Shot; title: string } | null>(null);
 
   const fetchData = useCallback(async () => {
     const [shotsRes, locsRes, refsRes] = await Promise.all([
@@ -56,7 +56,7 @@ export default function ShotListView({ projectId, canEdit, currentUserId }: Prop
   useEffect(() => { fetchData(); }, [fetchData]);
 
   const filtered = shots.filter((shot) => {
-    if (shot.id === pendingDelete?.id) return false;
+    if (shot.id === deletedShot?.shot.id) return false;
     if (statusFilter !== "all" && shot.status !== statusFilter) return false;
     if (locationFilter !== "all" && shot.location_id !== locationFilter) return false;
     if (search.trim()) {
@@ -66,24 +66,39 @@ export default function ShotListView({ projectId, canEdit, currentUserId }: Prop
     return true;
   });
 
-  function requestDelete(id: string, title: string) {
-    // If another delete is pending, commit it immediately before starting a new one
-    if (pendingDelete) {
-      fetch(`/api/projects/${projectId}/shots/${pendingDelete.id}`, { method: "DELETE" }).then(fetchData);
-    }
-    setPendingDelete({ id, title });
-  }
+  async function requestDelete(id: string, title: string) {
+    const shotData = shots.find((s) => s.id === id);
+    if (!shotData) return;
 
-  function undoDelete() {
-    setPendingDelete(null);
-  }
-
-  async function commitDelete() {
-    if (!pendingDelete) return;
-    const id = pendingDelete.id;
-    setPendingDelete(null);
     await fetch(`/api/projects/${projectId}/shots/${id}`, { method: "DELETE" });
     fetchData();
+    setDeletedShot({ shot: shotData, title });
+  }
+
+  async function undoDelete() {
+    if (!deletedShot) return;
+    const s = deletedShot.shot;
+    setDeletedShot(null);
+
+    await fetch(`/api/projects/${projectId}/shots`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        title: s.title,
+        description: s.description,
+        shot_type: s.shot_type,
+        image_url: s.image_url,
+        status: s.status,
+        location_id: s.location_id,
+        notes: s.notes,
+        position: s.position,
+      }),
+    });
+    fetchData();
+  }
+
+  function dismissDelete() {
+    setDeletedShot(null);
   }
 
   const planned = shots.filter((s) => s.status === "planned").length;
@@ -302,12 +317,12 @@ export default function ShotListView({ projectId, canEdit, currentUserId }: Prop
         />
       )}
 
-      {pendingDelete && (
+      {deletedShot && (
         <UndoToast
-          key={pendingDelete.id}
-          message={`"${pendingDelete.title}" deleted`}
+          key={deletedShot.shot.id}
+          message={`"${deletedShot.title}" deleted`}
           onUndo={undoDelete}
-          onCommit={commitDelete}
+          onDismiss={dismissDelete}
         />
       )}
     </div>

@@ -13,13 +13,14 @@ import {
   DragOverlay,
   DragStartEvent,
 } from "@dnd-kit/core";
-import { Plus, CalendarDays, MapPin, Route, Clock } from "lucide-react";
+import { Plus, CalendarDays, MapPin, Route, Clock, List, Calendar } from "lucide-react";
 import { ShootDayWithLocations, Location } from "@/lib/types";
 import { generateGoogleMapsUrl } from "@/lib/utils";
 import DayColumn from "./DayColumn";
 import DriveConnector from "./DriveConnector";
 import UndoToast from "@/components/ui/UndoToast";
 import LocationCard from "./LocationCard";
+import CalendarView from "./CalendarView";
 
 interface Props {
   projectId: string;
@@ -31,8 +32,9 @@ interface Props {
 export default function ItineraryView({ projectId, canEdit, startDate, onDaysCountChange }: Props) {
   const [days, setDays] = useState<ShootDayWithLocations[]>([]);
   const [loading, setLoading] = useState(true);
+  const [viewMode, setViewMode] = useState<"list" | "calendar">("list");
   const [activeLocation, setActiveLocation] = useState<Location | null>(null);
-  const [pendingDayDelete, setPendingDayDelete] = useState<{ id: string; label: string } | null>(null);
+  const [deletedDay, setDeletedDay] = useState<{ day: ShootDayWithLocations; label: string } | null>(null);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
@@ -62,23 +64,58 @@ export default function ItineraryView({ projectId, canEdit, startDate, onDaysCou
     fetchDays();
   }
 
-  function requestDayDelete(id: string, label: string) {
-    if (pendingDayDelete) {
-      fetch(`/api/projects/${projectId}/days/${pendingDayDelete.id}`, { method: "DELETE" }).then(fetchDays);
-    }
-    setPendingDayDelete({ id, label });
-  }
+  async function requestDayDelete(dayId: string, label: string) {
+    // Cache the full day data for undo
+    const dayData = days.find((d) => d.id === dayId);
+    if (!dayData) return;
 
-  function undoDayDelete() {
-    setPendingDayDelete(null);
-  }
-
-  async function commitDayDelete() {
-    if (!pendingDayDelete) return;
-    const id = pendingDayDelete.id;
-    setPendingDayDelete(null);
-    await fetch(`/api/projects/${projectId}/days/${id}`, { method: "DELETE" });
+    // Delete immediately from server
+    await fetch(`/api/projects/${projectId}/days/${dayId}`, { method: "DELETE" });
     fetchDays();
+    setDeletedDay({ day: dayData, label });
+  }
+
+  async function undoDayDelete() {
+    if (!deletedDay) return;
+    const { day } = deletedDay;
+    setDeletedDay(null);
+
+    // Re-create the day
+    const res = await fetch(`/api/projects/${projectId}/days`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ title: day.title, date: day.date }),
+    });
+    if (!res.ok) { fetchDays(); return; }
+    const newDay = await res.json();
+
+    // Re-create all locations
+    for (const loc of day.locations) {
+      await fetch(`/api/projects/${projectId}/locations`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          shoot_day_id: newDay.id,
+          name: loc.name,
+          description: loc.description,
+          address: loc.address,
+          latitude: loc.latitude,
+          longitude: loc.longitude,
+          photo_url: loc.photo_url,
+          position: loc.position,
+          notes: loc.notes,
+          prep_minutes: loc.prep_minutes,
+          shoot_minutes: loc.shoot_minutes,
+          wrap_minutes: loc.wrap_minutes,
+          break_after_minutes: loc.break_after_minutes,
+        }),
+      });
+    }
+    fetchDays();
+  }
+
+  function dismissDayDelete() {
+    setDeletedDay(null);
   }
 
   function handleDragStart(event: DragStartEvent) {
@@ -234,6 +271,25 @@ export default function ItineraryView({ projectId, canEdit, startDate, onDaysCou
           </>
         )}
         <div className="flex-1" />
+        {/* View toggle */}
+        {startDate && (
+          <div className="flex items-center bg-bg-primary rounded-lg border border-border p-0.5">
+            <button
+              onClick={() => setViewMode("list")}
+              className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium transition-colors ${viewMode === "list" ? "bg-bg-card text-text-primary shadow-sm" : "text-text-muted hover:text-text-secondary"}`}
+            >
+              <List className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">List</span>
+            </button>
+            <button
+              onClick={() => setViewMode("calendar")}
+              className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium transition-colors ${viewMode === "calendar" ? "bg-bg-card text-text-primary shadow-sm" : "text-text-muted hover:text-text-secondary"}`}
+            >
+              <Calendar className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Calendar</span>
+            </button>
+          </div>
+        )}
         {totalLocations > 0 && (
           <a
             href={mapsUrl}
@@ -242,13 +298,19 @@ export default function ItineraryView({ projectId, canEdit, startDate, onDaysCou
             className="flex items-center gap-2 text-sm bg-accent hover:bg-accent-hover text-white rounded-lg px-3 py-2 transition-colors"
           >
             <Route className="w-4 h-4" />
-            View in Google Maps
+            <span className="hidden sm:inline">View in Google Maps</span>
+            <span className="sm:hidden">Maps</span>
           </a>
         )}
       </div>
 
-      {/* Days */}
-      <DndContext
+      {/* Calendar View */}
+      {viewMode === "calendar" && startDate && (
+        <CalendarView days={days} startDate={startDate} />
+      )}
+
+      {/* Days (List View) */}
+      {viewMode === "list" && <DndContext
         sensors={sensors}
         collisionDetection={closestCenter}
         onDragStart={handleDragStart}
@@ -256,7 +318,7 @@ export default function ItineraryView({ projectId, canEdit, startDate, onDaysCou
         onDragEnd={handleDragEnd}
       >
         <div className="space-y-0">
-          {days.filter((d) => d.id !== pendingDayDelete?.id).map((day, dayIdx, visibleDays) => {
+          {days.filter((d) => d.id !== deletedDay?.day.id).map((day, dayIdx, visibleDays) => {
             const prevDay = dayIdx > 0 ? visibleDays[dayIdx - 1] : null;
             const prevLastLoc = prevDay?.locations?.[prevDay.locations.length - 1];
             const currFirstLoc = day.locations?.[0];
@@ -306,7 +368,7 @@ export default function ItineraryView({ projectId, canEdit, startDate, onDaysCou
             </div>
           ) : null}
         </DragOverlay>
-      </DndContext>
+      </DndContext>}
 
       {canEdit && (
         <button
@@ -318,12 +380,12 @@ export default function ItineraryView({ projectId, canEdit, startDate, onDaysCou
         </button>
       )}
 
-      {pendingDayDelete && (
+      {deletedDay && (
         <UndoToast
-          key={pendingDayDelete.id}
-          message={`"${pendingDayDelete.label}" deleted`}
+          key={deletedDay.day.id}
+          message={`"${deletedDay.label}" deleted`}
           onUndo={undoDayDelete}
-          onCommit={commitDayDelete}
+          onDismiss={dismissDayDelete}
         />
       )}
     </div>

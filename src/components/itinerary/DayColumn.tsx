@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useDroppable } from "@dnd-kit/core";
 import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { Plus, Trash2, Pencil, Check, X, MapPin, Clock, AlertTriangle, Coffee, ChevronDown, ChevronUp } from "lucide-react";
-import { ShootDayWithLocations } from "@/lib/types";
+import { ShootDayWithLocations, Location } from "@/lib/types";
 import LocationCard from "./LocationCard";
 import DriveConnector from "./DriveConnector";
 import AddLocationModal from "./AddLocationModal";
@@ -44,7 +44,7 @@ export default function DayColumn({ day, canEdit, projectId, onUpdate, onRequest
   const [showAddLocation, setShowAddLocation] = useState(false);
   const [insertAtPosition, setInsertAtPosition] = useState<number | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [pendingLocationDelete, setPendingLocationDelete] = useState<{ id: string; name: string } | null>(null);
+  const [deletedLocation, setDeletedLocation] = useState<{ location: Location; name: string } | null>(null);
 
   const { setNodeRef, isOver } = useDroppable({ id: day.id });
 
@@ -63,23 +63,46 @@ export default function DayColumn({ day, canEdit, projectId, onUpdate, onRequest
     onUpdate();
   }
 
-  function requestLocationDelete(id: string, name: string) {
-    if (pendingLocationDelete) {
-      fetch(`/api/projects/${projectId}/locations/${pendingLocationDelete.id}`, { method: "DELETE" }).then(onUpdate);
-    }
-    setPendingLocationDelete({ id, name });
-  }
+  async function requestLocationDelete(id: string, name: string) {
+    const locData = day.locations.find((l) => l.id === id);
+    if (!locData) return;
 
-  function undoLocationDelete() {
-    setPendingLocationDelete(null);
-  }
-
-  async function commitLocationDelete() {
-    if (!pendingLocationDelete) return;
-    const id = pendingLocationDelete.id;
-    setPendingLocationDelete(null);
+    // Delete immediately from server
     await fetch(`/api/projects/${projectId}/locations/${id}`, { method: "DELETE" });
     onUpdate();
+    setDeletedLocation({ location: locData, name });
+  }
+
+  async function undoLocationDelete() {
+    if (!deletedLocation) return;
+    const loc = deletedLocation.location;
+    setDeletedLocation(null);
+
+    // Re-create the location
+    await fetch(`/api/projects/${projectId}/locations`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        shoot_day_id: day.id,
+        name: loc.name,
+        description: loc.description,
+        address: loc.address,
+        latitude: loc.latitude,
+        longitude: loc.longitude,
+        photo_url: loc.photo_url,
+        position: loc.position,
+        notes: loc.notes,
+        prep_minutes: loc.prep_minutes,
+        shoot_minutes: loc.shoot_minutes,
+        wrap_minutes: loc.wrap_minutes,
+        break_after_minutes: loc.break_after_minutes,
+      }),
+    });
+    onUpdate();
+  }
+
+  function dismissLocationDelete() {
+    setDeletedLocation(null);
   }
 
   function openInsertAt(position: number) {
@@ -201,7 +224,7 @@ export default function DayColumn({ day, canEdit, projectId, onUpdate, onRequest
       {expanded && <div className="p-4">
         <SortableContext items={day.locations.map((l) => l.id)} strategy={verticalListSortingStrategy}>
           <div className="space-y-0">
-            {day.locations.filter((l) => l.id !== pendingLocationDelete?.id).map((location, idx, visibleLocs) => (
+            {day.locations.map((location, idx, visibleLocs) => (
               <div key={location.id}>
                 {idx > 0 && (
                   <div className="relative group/connector">
@@ -273,12 +296,12 @@ export default function DayColumn({ day, canEdit, projectId, onUpdate, onRequest
         />
       )}
 
-      {pendingLocationDelete && (
+      {deletedLocation && (
         <UndoToast
-          key={pendingLocationDelete.id}
-          message={`"${pendingLocationDelete.name}" deleted`}
+          key={deletedLocation.location.id}
+          message={`"${deletedLocation.name}" deleted`}
           onUndo={undoLocationDelete}
-          onCommit={commitLocationDelete}
+          onDismiss={dismissLocationDelete}
         />
       )}
     </div>

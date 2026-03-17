@@ -1,18 +1,18 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Undo2 } from "lucide-react";
+import { Undo2, X } from "lucide-react";
 
 interface Props {
   message: string;
   duration?: number;
   onUndo: () => void;
-  onCommit: () => void;
+  onDismiss: () => void;
 }
 
-export default function UndoToast({ message, duration = 30000, onUndo, onCommit }: Props) {
+export default function UndoToast({ message, duration = 5000, onUndo, onDismiss }: Props) {
   const [progress, setProgress] = useState(100);
-  const committedRef = useRef(false);
+  const doneRef = useRef(false);
   const startRef = useRef(Date.now());
 
   useEffect(() => {
@@ -23,18 +23,25 @@ export default function UndoToast({ message, duration = 30000, onUndo, onCommit 
       setProgress(remaining);
       if (remaining === 0) {
         clearInterval(interval);
-        if (!committedRef.current) {
-          committedRef.current = true;
-          onCommit();
+        if (!doneRef.current) {
+          doneRef.current = true;
+          onDismiss();
         }
       }
     }, 50);
     return () => clearInterval(interval);
-  }, [duration, onCommit]);
+  }, [duration, onDismiss]);
 
   function handleUndo() {
-    committedRef.current = true;
+    if (doneRef.current) return;
+    doneRef.current = true;
     onUndo();
+  }
+
+  function handleDismiss() {
+    if (doneRef.current) return;
+    doneRef.current = true;
+    onDismiss();
   }
 
   return (
@@ -42,13 +49,21 @@ export default function UndoToast({ message, duration = 30000, onUndo, onCommit 
       <div className="bg-bg-card border border-border rounded-xl shadow-2xl overflow-hidden pointer-events-auto">
         <div className="flex items-center justify-between px-4 py-3 gap-3">
           <p className="text-sm text-text-primary">{message}</p>
-          <button
-            onClick={handleUndo}
-            className="flex items-center gap-1.5 text-accent hover:text-accent-hover text-sm font-medium whitespace-nowrap shrink-0"
-          >
-            <Undo2 className="w-3.5 h-3.5" />
-            Undo
-          </button>
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              onClick={handleUndo}
+              className="flex items-center gap-1.5 text-accent hover:text-accent-hover text-sm font-medium whitespace-nowrap"
+            >
+              <Undo2 className="w-3.5 h-3.5" />
+              Undo
+            </button>
+            <button
+              onClick={handleDismiss}
+              className="text-text-muted hover:text-text-primary transition-colors p-0.5"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
         </div>
         <div className="h-0.5 bg-border">
           <div className="h-full bg-accent" style={{ width: `${progress}%`, transition: "width 50ms linear" }} />
