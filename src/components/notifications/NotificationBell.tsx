@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { Bell, Heart, MessageCircle, MapPin, Check, CheckCheck, CalendarDays, MessageSquare } from "lucide-react";
+import { Bell, Heart, MessageCircle, MapPin, Check, CheckCheck, CalendarDays } from "lucide-react";
 import { Notification, NotificationType } from "@/lib/types";
 
 const typeIcons: Record<NotificationType, typeof Heart> = {
@@ -14,7 +14,7 @@ const typeIcons: Record<NotificationType, typeof Heart> = {
   shot_status_changed: Check,
   day_added: CalendarDays,
   reference_location_assigned: MapPin,
-  chat_message: MessageSquare,
+  chat_message: MessageCircle,
 };
 
 const typeColors: Record<NotificationType, string> = {

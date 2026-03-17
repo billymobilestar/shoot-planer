@@ -2,7 +2,6 @@ import { auth, currentUser } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabase";
 import { getDisplayName } from "@/lib/utils";
-import { createNotifications } from "@/lib/notifications";
 
 export async function GET(request: Request, { params }: { params: Promise<{ projectId: string }> }) {
   const { userId } = await auth();
@@ -60,18 +59,6 @@ export async function POST(request: Request, { params }: { params: Promise<{ pro
     .single();
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-
-  // Create notifications for other project members
-  await createNotifications({
-    projectId,
-    actorUserId: userId,
-    actorName: displayName,
-    type: "chat_message",
-    title: `${displayName} sent a message`,
-    body: content.length > 100 ? content.slice(0, 100) + "..." : content,
-    resourceId: data.id,
-    deepLink: `/project/${projectId}?tab=chat`,
-  });
 
   return NextResponse.json(data, { status: 201 });
 }
