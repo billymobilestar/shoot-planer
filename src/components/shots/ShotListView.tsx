@@ -40,6 +40,7 @@ export default function ShotListView({ projectId, canEdit, currentUserId }: Prop
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkApplying, setBulkApplying] = useState(false);
   const [deletedShot, setDeletedShot] = useState<{ shot: Shot; title: string } | null>(null);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
 
   const fetchData = useCallback(async () => {
     const [shotsRes, locsRes, refsRes] = await Promise.all([
@@ -288,7 +289,7 @@ export default function ShotListView({ projectId, canEdit, currentUserId }: Prop
           {canEdit && !search && <p className="text-text-muted text-sm mt-1">Add shots to track what you need to capture.</p>}
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 items-start">
           {filtered.map((shot) => (
             <ShotCard
               key={shot.id}
@@ -302,6 +303,8 @@ export default function ShotListView({ projectId, canEdit, currentUserId }: Prop
               onRequestDelete={() => requestDelete(shot.id, shot.title)}
               isSelected={selectedIds.has(shot.id)}
               onToggleSelect={canEdit ? () => toggleSelect(shot.id) : undefined}
+              expanded={canEdit ? expandedId === shot.id : true}
+              onToggleExpand={() => setExpandedId((prev) => prev === shot.id ? null : shot.id)}
             />
           ))}
         </div>

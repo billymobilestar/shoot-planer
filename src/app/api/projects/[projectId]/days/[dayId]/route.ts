@@ -54,20 +54,25 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ p
   // Renumber remaining days sequentially
   const { data: remaining } = await supabase
     .from("shoot_days")
-    .select("id, day_number")
+    .select("id, day_number, title")
     .eq("project_id", projectId)
     .order("day_number");
 
   if (remaining && remaining.length > 0) {
-    await Promise.all(
-      remaining.map((d, idx) => {
-        const newNum = idx + 1;
-        if (d.day_number !== newNum) {
-          return supabase.from("shoot_days").update({ day_number: newNum }).eq("id", d.id);
+    // Update sequentially in ascending order to avoid unique constraint conflicts
+    // (each day_number only decreases, so the target slot is always free)
+    for (let idx = 0; idx < remaining.length; idx++) {
+      const d = remaining[idx];
+      const newNum = idx + 1;
+      if (d.day_number !== newNum) {
+        const updates: Record<string, unknown> = { day_number: newNum };
+        // Also update auto-generated titles like "Day 3" → "Day 2"
+        if (d.title && /^Day \d+$/.test(d.title)) {
+          updates.title = `Day ${newNum}`;
         }
-        return Promise.resolve();
-      })
-    );
+        await supabase.from("shoot_days").update(updates).eq("id", d.id);
+      }
+    }
   }
 
   return NextResponse.json({ success: true });

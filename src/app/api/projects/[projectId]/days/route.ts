@@ -61,7 +61,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ pro
     // Shift all days after this position up by 1
     const { data: toShift } = await supabase
       .from("shoot_days")
-      .select("id, day_number")
+      .select("id, day_number, title")
       .eq("project_id", projectId)
       .gt("day_number", insertAfter)
       .order("day_number", { ascending: false });
@@ -69,7 +69,12 @@ export async function POST(request: Request, { params }: { params: Promise<{ pro
     if (toShift && toShift.length > 0) {
       // Update in descending order to avoid unique constraint conflicts
       for (const d of toShift) {
-        await supabase.from("shoot_days").update({ day_number: d.day_number + 1 }).eq("id", d.id);
+        const updates: Record<string, unknown> = { day_number: d.day_number + 1 };
+        // Also update auto-generated titles like "Day 2" → "Day 3"
+        if (d.title && /^Day \d+$/.test(d.title)) {
+          updates.title = `Day ${d.day_number + 1}`;
+        }
+        await supabase.from("shoot_days").update(updates).eq("id", d.id);
       }
     }
     dayNumber = insertAfter + 1;

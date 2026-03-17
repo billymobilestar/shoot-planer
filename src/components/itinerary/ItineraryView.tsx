@@ -19,6 +19,7 @@ import { generateGoogleMapsUrl } from "@/lib/utils";
 import DayColumn from "./DayColumn";
 import DriveConnector from "./DriveConnector";
 import DeleteDayModal from "./DeleteDayModal";
+import InsertDayModal from "./InsertDayModal";
 import UndoToast from "@/components/ui/UndoToast";
 import LocationCard from "./LocationCard";
 import CalendarView from "./CalendarView";
@@ -56,6 +57,7 @@ export default function ItineraryView({ projectId, canEdit, startDate, onDaysCou
   const [activeLocation, setActiveLocation] = useState<Location | null>(null);
   const [deletedDay, setDeletedDay] = useState<{ day: ShootDayWithLocations; label: string } | null>(null);
   const [dayToDelete, setDayToDelete] = useState<ShootDayWithLocations | null>(null);
+  const [insertAfterDay, setInsertAfterDay] = useState<number | null>(null);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
@@ -151,7 +153,14 @@ export default function ItineraryView({ projectId, canEdit, startDate, onDaysCou
     setDeletedDay(null);
   }
 
-  async function insertDayAfter(dayNumber: number) {
+  function requestInsertDay(dayNumber: number) {
+    setInsertAfterDay(dayNumber);
+  }
+
+  async function confirmInsertDay() {
+    if (insertAfterDay === null) return;
+    const dayNumber = insertAfterDay;
+    setInsertAfterDay(null);
     await fetch(`/api/projects/${projectId}/days`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -398,7 +407,7 @@ export default function ItineraryView({ projectId, canEdit, startDate, onDaysCou
                     {canEdit && (
                       <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 flex justify-center z-10 pointer-events-none">
                         <button
-                          onClick={() => insertDayAfter(prevDay!.day_number)}
+                          onClick={() => requestInsertDay(prevDay!.day_number)}
                           className="pointer-events-auto flex items-center gap-1 px-3 py-1.5 rounded-full bg-accent/80 sm:bg-accent text-white text-xs font-medium opacity-60 sm:opacity-0 sm:group-hover/insert-day:opacity-100 hover:opacity-100 active:opacity-100 hover:bg-accent-hover active:bg-accent-hover transition-all shadow-md"
                           title="Insert a new day here"
                         >
@@ -467,6 +476,15 @@ export default function ItineraryView({ projectId, canEdit, startDate, onDaysCou
           onDeleteAndShift={() => handleDeleteAndShift(dayToDelete.id, dayToDelete.title || `Day ${dayToDelete.day_number}`, dayToDelete)}
           onClearDay={() => handleClearDay(dayToDelete.id)}
           onClose={() => setDayToDelete(null)}
+        />
+      )}
+
+      {insertAfterDay !== null && (
+        <InsertDayModal
+          afterDayNumber={insertAfterDay}
+          totalDays={days.length}
+          onConfirm={confirmInsertDay}
+          onClose={() => setInsertAfterDay(null)}
         />
       )}
     </div>
