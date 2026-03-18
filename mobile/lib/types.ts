@@ -19,6 +19,20 @@ export interface ShootDay {
   project_id: string;
   day_number: number;
   title: string | null;
+  date: string | null;
+  created_at: string;
+}
+
+export interface Scene {
+  id: string;
+  location_id: string | null;
+  project_id: string;
+  title: string | null;
+  scene_text: string | null;
+  scene_file_url: string | null;
+  scene_file_name: string | null;
+  duration_minutes: number;
+  position: number;
   created_at: string;
 }
 
@@ -32,13 +46,24 @@ export interface Location {
   latitude: number | null;
   longitude: number | null;
   photo_url: string | null;
+  drive_time_from_previous: string | null;
+  drive_distance_from_previous: string | null;
   prep_minutes: number;
   shoot_minutes: number;
   wrap_minutes: number;
   break_after_minutes: number;
   completed: boolean;
   position: number;
+  notes: string | null;
+  scene_text: string | null;
+  scene_file_url: string | null;
+  scene_file_name: string | null;
   created_at: string;
+  scenes?: Scene[];
+}
+
+export interface ShootDayWithLocations extends ShootDay {
+  locations: Location[];
 }
 
 export interface Shot {
@@ -53,19 +78,6 @@ export interface Shot {
   status: "planned" | "in_progress" | "completed" | "cancelled";
   position: number;
   notes: string | null;
-  created_at: string;
-}
-
-export interface Scene {
-  id: string;
-  location_id: string | null;
-  project_id: string;
-  title: string | null;
-  scene_text: string | null;
-  scene_file_url: string | null;
-  scene_file_name: string | null;
-  duration_minutes: number;
-  position: number;
   created_at: string;
 }
 
