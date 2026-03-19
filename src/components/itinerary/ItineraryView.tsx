@@ -13,7 +13,7 @@ import {
   DragOverlay,
   DragStartEvent,
 } from "@dnd-kit/core";
-import { Plus, CalendarDays, MapPin, Route, Clock, List, Calendar, FilmIcon, Car, Navigation, Loader2 } from "lucide-react";
+import { Plus, CalendarDays, MapPin, Route, Clock, List, Calendar, FilmIcon, Car, Navigation, Loader2, Home, X as XIcon } from "lucide-react";
 import { ShootDayWithLocations, Location } from "@/lib/types";
 
 import { useTracking } from "@/components/tracking/TrackingProvider";
@@ -23,6 +23,7 @@ import DriveConnector from "./DriveConnector";
 import DeleteDayModal from "./DeleteDayModal";
 import InsertDayModal from "./InsertDayModal";
 import MapsRouteModal from "./MapsRouteModal";
+import AddressAutocomplete from "../AddressAutocomplete";
 import UndoToast from "@/components/ui/UndoToast";
 import LocationCard from "./LocationCard";
 import CalendarView from "./CalendarView";
@@ -62,6 +63,14 @@ export default function ItineraryView({ projectId, canEdit, startDate, onDaysCou
   const [dayToDelete, setDayToDelete] = useState<ShootDayWithLocations | null>(null);
   const [insertAfterDay, setInsertAfterDay] = useState<number | null>(null);
   const [showMapsModal, setShowMapsModal] = useState(false);
+  const [homeAddress, setHomeAddress] = useState<string | null>(null);
+  const [homeCheckDone, setHomeCheckDone] = useState(false);
+  const [showHomeForm, setShowHomeForm] = useState(false);
+  const [homeInput, setHomeInput] = useState("");
+  const [homeLat, setHomeLat] = useState<number | null>(null);
+  const [homeLng, setHomeLng] = useState<number | null>(null);
+  const [savingHome, setSavingHome] = useState(false);
+  const [homeDismissed, setHomeDismissed] = useState(false);
 
   const { active: trackingActive, start: startTracking, stop: stopTracking, setLocations: setTrackingLocations, loading: trackingLoading } = useTracking();
 
@@ -101,6 +110,32 @@ export default function ItineraryView({ projectId, canEdit, startDate, onDaysCou
   useEffect(() => {
     fetchDays();
   }, [fetchDays]);
+
+  // Check if user has home address set
+  useEffect(() => {
+    fetch("/api/user-settings")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (data?.home_address) setHomeAddress(data.home_address);
+        setHomeCheckDone(true);
+      })
+      .catch(() => setHomeCheckDone(true));
+  }, []);
+
+  async function saveHomeAddress() {
+    if (!homeLat || !homeLng) return;
+    setSavingHome(true);
+    const res = await fetch("/api/user-settings", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ home_address: homeInput, home_latitude: homeLat, home_longitude: homeLng }),
+    });
+    if (res.ok) {
+      setHomeAddress(homeInput);
+      setShowHomeForm(false);
+    }
+    setSavingHome(false);
+  }
 
   async function addDay() {
     await fetch(`/api/projects/${projectId}/days`, {
@@ -433,6 +468,83 @@ export default function ItineraryView({ projectId, canEdit, startDate, onDaysCou
 
       {/* Tracking Banner */}
       <TrackingBanner projectId={projectId} onMarkCompleted={markLocationCompleted} />
+
+      {/* Home Address CTA */}
+      {homeCheckDone && !homeAddress && !homeDismissed && totalLocations > 0 && (
+        <div className="mb-4 rounded-xl border border-border bg-bg-card p-4">
+          {!showHomeForm ? (
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-accent/10 flex items-center justify-center shrink-0">
+                <Home className="w-5 h-5 text-accent" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold text-text-primary">Set your home address</p>
+                <p className="text-xs text-text-muted mt-0.5">Get driving routes from home to your shoot locations</p>
+              </div>
+              <button
+                onClick={() => setShowHomeForm(true)}
+                className="shrink-0 bg-accent hover:bg-accent-hover text-white text-sm font-medium rounded-lg px-4 py-2 transition-colors"
+              >
+                Add
+              </button>
+              <button onClick={() => setHomeDismissed(true)} className="shrink-0 text-text-muted hover:text-text-primary transition-colors">
+                <XIcon className="w-4 h-4" />
+              </button>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-lg bg-accent/10 flex items-center justify-center shrink-0">
+                  <Home className="w-5 h-5 text-accent" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-text-primary">Enter your home address</p>
+                </div>
+              </div>
+              <AddressAutocomplete
+                value={homeInput}
+                onChange={setHomeInput}
+                onPlaceSelect={(place) => {
+                  setHomeInput(place.address);
+                  setHomeLat(place.latitude);
+                  setHomeLng(place.longitude);
+                }}
+                placeholder="Search your address..."
+                className="w-full bg-bg-input border border-border rounded-lg px-4 py-2.5 text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent"
+              />
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setShowHomeForm(false)}
+                  className="bg-bg-card hover:bg-bg-card-hover border border-border text-text-primary rounded-lg px-4 py-2 text-sm transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={saveHomeAddress}
+                  disabled={!homeLat || !homeLng || savingHome}
+                  className="bg-accent hover:bg-accent-hover text-white rounded-lg px-4 py-2 text-sm font-medium transition-colors disabled:opacity-50"
+                >
+                  {savingHome ? "Saving..." : "Save Home Address"}
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Home address saved indicator */}
+      {homeCheckDone && homeAddress && !homeDismissed && totalLocations > 0 && (
+        <div className="mb-4 rounded-xl border border-border bg-bg-card px-4 py-3 flex items-center gap-3">
+          <Home className="w-4 h-4 text-accent shrink-0" />
+          <span className="text-sm text-text-secondary flex-1 truncate">Home: {homeAddress}</span>
+          <button
+            onClick={() => { setShowHomeForm(true); setHomeInput(homeAddress); setHomeAddress(null); }}
+            className="text-xs text-text-muted hover:text-accent transition-colors shrink-0"
+          >
+            Change
+          </button>
+        </div>
+      )}
 
       {/* Calendar View */}
       {viewMode === "calendar" && startDate && (
