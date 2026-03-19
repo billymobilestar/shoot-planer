@@ -12,6 +12,7 @@ interface Props {
   destLng?: number | null;
   locationId?: string;
   projectId?: string;
+  onDriveTimeCalculated?: (duration: string, distance: string) => void;
 }
 
 export default function DriveConnector({
@@ -23,6 +24,7 @@ export default function DriveConnector({
   destLng,
   locationId,
   projectId,
+  onDriveTimeCalculated,
 }: Props) {
   const [time, setTime] = useState(driveTime || null);
   const [distance, setDistance] = useState(driveDistance || null);
@@ -67,7 +69,11 @@ export default function DriveConnector({
               drive_time_from_previous: data.duration,
               drive_distance_from_previous: data.distance,
             }),
+          }).then(() => {
+            onDriveTimeCalculated?.(data.duration, data.distance);
           });
+        } else {
+          onDriveTimeCalculated?.(data.duration, data.distance);
         }
       })
       .catch(() => {})

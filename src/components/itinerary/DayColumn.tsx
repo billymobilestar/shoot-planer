@@ -278,6 +278,7 @@ export default function DayColumn({ day, canEdit, projectId, onUpdate, onRequest
                       destLng={location.longitude}
                       locationId={location.id}
                       projectId={projectId}
+                      onDriveTimeCalculated={() => onUpdate()}
                     />
                     {/* Insert location between */}
                     {canEdit && (
