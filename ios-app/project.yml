@@ -1,0 +1,26 @@
+name: ShootPlanner
+options:
+  bundleIdPrefix: com.shootplanner
+  deploymentTarget:
+    iOS: "16.0"
+  xcodeVersion: "16.4"
+
+settings:
+  base:
+    SWIFT_VERSION: "5.10"
+    TARGETED_DEVICE_FAMILY: "1,2"
+
+targets:
+  ShootPlanner:
+    type: application
+    platform: iOS
+    sources:
+      - ShootPlanner
+    settings:
+      base:
+        INFOPLIST_FILE: ShootPlanner/Info.plist
+        PRODUCT_BUNDLE_IDENTIFIER: com.shootplanner.app
+        CODE_SIGN_STYLE: Automatic
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+    info:
+      path: ShootPlanner/Info.plist

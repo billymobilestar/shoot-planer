@@ -1,12 +1,24 @@
 "use client";
 
-import { SignIn } from "@clerk/nextjs";
+import { SignIn, useAuth } from "@clerk/nextjs";
 import { useSearchParams } from "next/navigation";
-import { Suspense } from "react";
+import { Suspense, useEffect } from "react";
 
 function SignInForm() {
   const searchParams = useSearchParams();
   const redirectUrl = searchParams.get("redirect_url") || "/dashboard";
+  const { userId, getToken } = useAuth();
+
+  // Handle native app OAuth callback — redirect back to iOS app with session token
+  useEffect(() => {
+    if (userId && redirectUrl?.startsWith("shootplanner://")) {
+      getToken().then((token) => {
+        if (token) {
+          window.location.href = `${redirectUrl}?session_token=${token}`;
+        }
+      });
+    }
+  }, [userId, redirectUrl, getToken]);
 
   return <SignIn forceRedirectUrl={redirectUrl} />;
 }
