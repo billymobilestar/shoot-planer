@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import {
   DndContext,
   closestCenter,
@@ -13,7 +13,7 @@ import {
   DragOverlay,
   DragStartEvent,
 } from "@dnd-kit/core";
-import { Plus, CalendarDays, MapPin, Route, Clock, List, Calendar, FilmIcon, Car, Navigation, Loader2, Home, X as XIcon } from "lucide-react";
+import { Plus, CalendarDays, MapPin, Route, Clock, List, Calendar, FilmIcon, Car, Navigation, Loader2, Home, X as XIcon, CheckCircle2, ArrowRight } from "lucide-react";
 import { ShootDayWithLocations, Location } from "@/lib/types";
 
 import { useTracking } from "@/components/tracking/TrackingProvider";
@@ -63,6 +63,7 @@ export default function ItineraryView({ projectId, canEdit, startDate, onDaysCou
   const [dayToDelete, setDayToDelete] = useState<ShootDayWithLocations | null>(null);
   const [insertAfterDay, setInsertAfterDay] = useState<number | null>(null);
   const [showMapsModal, setShowMapsModal] = useState(false);
+  const [showTodayMapsModal, setShowTodayMapsModal] = useState(false);
   const [homeAddress, setHomeAddress] = useState<string | null>(null);
   const [homeCheckDone, setHomeCheckDone] = useState(false);
   const [showHomeForm, setShowHomeForm] = useState(false);
@@ -136,6 +137,32 @@ export default function ItineraryView({ projectId, canEdit, startDate, onDaysCou
     }
     setSavingHome(false);
   }
+
+  // Auto-detect current shoot day based on start_date + today
+  const todaysDayInfo = useMemo(() => {
+    if (!startDate || days.length === 0) return null;
+    const start = new Date(startDate + "T00:00:00");
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const diffMs = today.getTime() - start.getTime();
+    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+    const todayDayNumber = diffDays + 1; // Day 1 = start_date
+
+    const currentDay = days.find((d) => d.day_number === todayDayNumber);
+    if (!currentDay) return null;
+
+    const nextUncompleted = currentDay.locations.find((l) => !l.completed);
+    const remainingLocations = currentDay.locations.filter((l) => !l.completed);
+    const allDone = currentDay.locations.length > 0 && remainingLocations.length === 0;
+
+    return {
+      day: currentDay,
+      dayNumber: todayDayNumber,
+      nextUncompleted,
+      remainingLocations,
+      allDone,
+    };
+  }, [startDate, days]);
 
   async function addDay() {
     await fetch(`/api/projects/${projectId}/days`, {
@@ -469,6 +496,51 @@ export default function ItineraryView({ projectId, canEdit, startDate, onDaysCou
       {/* Tracking Banner */}
       <TrackingBanner projectId={projectId} onMarkCompleted={markLocationCompleted} />
 
+      {/* Today's Shoot Day Banner */}
+      {todaysDayInfo && (
+        <div className="mb-4 rounded-xl border border-accent/30 bg-accent/5 p-4">
+          <div className="flex items-start gap-3">
+            <div className="w-10 h-10 rounded-lg bg-accent/10 flex flex-col items-center justify-center shrink-0">
+              <span className="font-bold text-accent text-sm leading-none">{todaysDayInfo.dayNumber}</span>
+              <span className="text-[8px] uppercase tracking-wider text-accent/60">Today</span>
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold text-text-primary">
+                {todaysDayInfo.day.title || `Day ${todaysDayInfo.dayNumber}`}
+              </p>
+              {todaysDayInfo.allDone ? (
+                <div className="flex items-center gap-1.5 mt-1">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-success" />
+                  <span className="text-xs text-success font-medium">All {todaysDayInfo.day.locations.length} locations completed!</span>
+                </div>
+              ) : todaysDayInfo.nextUncompleted ? (
+                <div className="mt-1">
+                  <div className="flex items-center gap-1.5">
+                    <ArrowRight className="w-3 h-3 text-accent" />
+                    <span className="text-xs text-text-secondary">Next:</span>
+                    <span className="text-xs font-medium text-text-primary truncate">{todaysDayInfo.nextUncompleted.name}</span>
+                  </div>
+                  <p className="text-xs text-text-muted mt-0.5">
+                    {todaysDayInfo.remainingLocations.length} of {todaysDayInfo.day.locations.length} locations remaining
+                  </p>
+                </div>
+              ) : (
+                <p className="text-xs text-text-muted mt-1">No locations scheduled</p>
+              )}
+            </div>
+            {todaysDayInfo.remainingLocations.length > 0 && (
+              <button
+                onClick={() => setShowTodayMapsModal(true)}
+                className="shrink-0 flex items-center gap-1.5 bg-accent hover:bg-accent-hover text-white text-xs font-medium rounded-lg px-3 py-2 transition-colors"
+              >
+                <Route className="w-3.5 h-3.5" />
+                Today&apos;s Route
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Home Address CTA */}
       {homeCheckDone && !homeAddress && !homeDismissed && totalLocations > 0 && (
         <div className="mb-4 rounded-xl border border-border bg-bg-card p-4">
@@ -608,6 +680,7 @@ export default function ItineraryView({ projectId, canEdit, startDate, onDaysCou
                     d.setDate(d.getDate() + day.day_number - 1);
                     return d.toISOString().slice(0, 10);
                   })() : null}
+                  isToday={todaysDayInfo?.dayNumber === day.day_number}
                 />
               </div>
             );
@@ -672,6 +745,14 @@ export default function ItineraryView({ projectId, canEdit, startDate, onDaysCou
           locations={allLocations}
           label={`All ${days.length} days`}
           onClose={() => setShowMapsModal(false)}
+        />
+      )}
+
+      {showTodayMapsModal && todaysDayInfo && (
+        <MapsRouteModal
+          locations={todaysDayInfo.remainingLocations}
+          label={`Today — ${todaysDayInfo.day.title || `Day ${todaysDayInfo.dayNumber}`}`}
+          onClose={() => setShowTodayMapsModal(false)}
         />
       )}
     </div>

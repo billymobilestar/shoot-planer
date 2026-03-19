@@ -22,6 +22,7 @@ interface Props {
   isFirst?: boolean;
   isLast?: boolean;
   dayDate?: string | null;
+  isToday?: boolean;
 }
 
 function parseDriveMinutes(t: string | null): number {
@@ -42,7 +43,7 @@ function fmtMins(mins: number): string {
   return `${h}h ${m}m`;
 }
 
-export default function DayColumn({ day, canEdit, projectId, onUpdate, onRequestDeleteDay, onShiftDay, isFirst, isLast, dayDate }: Props) {
+export default function DayColumn({ day, canEdit, projectId, onUpdate, onRequestDeleteDay, onShiftDay, isFirst, isLast, dayDate, isToday }: Props) {
   const [expanded, setExpanded] = useState(true);
   const [editingTitle, setEditingTitle] = useState(false);
   const [titleValue, setTitleValue] = useState(day.title || "");
@@ -133,7 +134,7 @@ export default function DayColumn({ day, canEdit, projectId, onUpdate, onRequest
     <div
       ref={setNodeRef}
       className={`bg-bg-card border rounded-xl overflow-hidden transition-colors ${
-        isOver ? "border-accent bg-accent-muted" : "border-border"
+        isOver ? "border-accent bg-accent-muted" : isToday ? "border-accent/50 ring-1 ring-accent/20" : "border-border"
       }`}
     >
       {/* Day Header */}
@@ -142,9 +143,9 @@ export default function DayColumn({ day, canEdit, projectId, onUpdate, onRequest
         onClick={() => !editingTitle && setExpanded((v) => !v)}
       >
         <div className="flex items-center gap-4">
-          <div className={`w-12 h-12 rounded-xl flex flex-col items-center justify-center shrink-0 ${dayComplete ? "bg-success/10" : "bg-accent-muted"}`}>
+          <div className={`w-12 h-12 rounded-xl flex flex-col items-center justify-center shrink-0 ${dayComplete ? "bg-success/10" : isToday ? "bg-accent/20" : "bg-accent-muted"}`}>
             <span className={`font-bold text-lg leading-none ${dayComplete ? "text-success" : "text-accent"}`}>{day.day_number}</span>
-            <span className={`text-[10px] uppercase tracking-wider ${dayComplete ? "text-success/60" : "text-accent/60"}`}>Day</span>
+            <span className={`text-[10px] uppercase tracking-wider ${dayComplete ? "text-success/60" : isToday ? "text-accent" : "text-accent/60"}`}>{isToday ? "Today" : "Day"}</span>
           </div>
           {editingTitle ? (
             <div className="flex items-center gap-2">
