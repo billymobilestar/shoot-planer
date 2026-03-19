@@ -15,13 +15,14 @@ import {
 } from "@dnd-kit/core";
 import { Plus, CalendarDays, MapPin, Route, Clock, List, Calendar, FilmIcon, Car, Navigation, Loader2 } from "lucide-react";
 import { ShootDayWithLocations, Location } from "@/lib/types";
-import { generateGoogleMapsUrl } from "@/lib/utils";
+
 import { useTracking } from "@/components/tracking/TrackingProvider";
 import TrackingBanner from "@/components/tracking/TrackingBanner";
 import DayColumn from "./DayColumn";
 import DriveConnector from "./DriveConnector";
 import DeleteDayModal from "./DeleteDayModal";
 import InsertDayModal from "./InsertDayModal";
+import MapsRouteModal from "./MapsRouteModal";
 import UndoToast from "@/components/ui/UndoToast";
 import LocationCard from "./LocationCard";
 import CalendarView from "./CalendarView";
@@ -60,6 +61,7 @@ export default function ItineraryView({ projectId, canEdit, startDate, onDaysCou
   const [deletedDay, setDeletedDay] = useState<{ day: ShootDayWithLocations; label: string } | null>(null);
   const [dayToDelete, setDayToDelete] = useState<ShootDayWithLocations | null>(null);
   const [insertAfterDay, setInsertAfterDay] = useState<number | null>(null);
+  const [showMapsModal, setShowMapsModal] = useState(false);
 
   const { active: trackingActive, start: startTracking, stop: stopTracking, setLocations: setTrackingLocations, loading: trackingLoading } = useTracking();
 
@@ -310,7 +312,7 @@ export default function ItineraryView({ projectId, canEdit, startDate, onDaysCou
 
   const allLocations = days.flatMap((d) => d.locations);
   const totalLocations = allLocations.length;
-  const mapsUrl = generateGoogleMapsUrl(allLocations);
+
 
   // Three-part duration calculations
   const totalDrivingMinutes = allLocations.reduce((sum, loc) => sum + parseDriveMinutes(loc.drive_time_from_previous), 0);
@@ -418,16 +420,14 @@ export default function ItineraryView({ projectId, canEdit, startDate, onDaysCou
           </button>
         )}
         {totalLocations > 0 && (
-          <a
-            href={mapsUrl}
-            target="_blank"
-            rel="noopener noreferrer"
+          <button
+            onClick={() => setShowMapsModal(true)}
             className="flex items-center gap-2 text-sm bg-accent hover:bg-accent-hover text-white rounded-lg px-3 py-2 transition-colors"
           >
             <Route className="w-4 h-4" />
             <span className="hidden sm:inline">View in Google Maps</span>
             <span className="sm:hidden">Maps</span>
-          </a>
+          </button>
         )}
       </div>
 
@@ -552,6 +552,14 @@ export default function ItineraryView({ projectId, canEdit, startDate, onDaysCou
           totalDays={days.length}
           onConfirm={confirmInsertDay}
           onClose={() => setInsertAfterDay(null)}
+        />
+      )}
+
+      {showMapsModal && (
+        <MapsRouteModal
+          locations={allLocations}
+          label={`All ${days.length} days`}
+          onClose={() => setShowMapsModal(false)}
         />
       )}
     </div>

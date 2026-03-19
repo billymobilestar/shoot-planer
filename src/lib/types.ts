@@ -214,3 +214,11 @@ export interface Notification {
 export interface ShootDayWithLocations extends ShootDay {
   locations: Location[];
 }
+
+export interface UserSettings {
+  user_id: string;
+  home_address: string | null;
+  home_latitude: number | null;
+  home_longitude: number | null;
+  updated_at: string;
+}

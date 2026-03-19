@@ -330,6 +330,20 @@ create policy "allow_all_messages" on project_messages for all using (true) with
 -- ALTER TYPE notification_type ADD VALUE IF NOT EXISTS 'chat_message';
 
 -- ============================================
+-- USER SETTINGS (home address for routing)
+-- ============================================
+create table user_settings (
+  user_id text primary key, -- Clerk user ID
+  home_address text,
+  home_latitude double precision,
+  home_longitude double precision,
+  updated_at timestamptz default now()
+);
+
+alter table user_settings enable row level security;
+create policy "allow_all_user_settings" on user_settings for all using (true) with check (true);
+
+-- ============================================
 -- STORAGE BUCKET for images
 -- ============================================
 -- Run these in Supabase Dashboard > Storage:

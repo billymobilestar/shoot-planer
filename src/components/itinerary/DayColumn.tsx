@@ -3,12 +3,13 @@
 import { useState } from "react";
 import { useDroppable } from "@dnd-kit/core";
 import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
-import { Plus, Trash2, Pencil, Check, X, MapPin, Clock, AlertTriangle, Coffee, ChevronDown, ChevronUp, FilmIcon, Car, ArrowUp, ArrowDown } from "lucide-react";
+import { Plus, Trash2, Pencil, Check, X, MapPin, Clock, AlertTriangle, Coffee, ChevronDown, ChevronUp, FilmIcon, Car, ArrowUp, ArrowDown, Route } from "lucide-react";
 import { ShootDayWithLocations, Location } from "@/lib/types";
 import { useTracking } from "@/components/tracking/TrackingProvider";
 import LocationCard from "./LocationCard";
 import DriveConnector from "./DriveConnector";
 import AddLocationModal from "./AddLocationModal";
+import MapsRouteModal from "./MapsRouteModal";
 import UndoToast from "@/components/ui/UndoToast";
 
 interface Props {
@@ -48,6 +49,7 @@ export default function DayColumn({ day, canEdit, projectId, onUpdate, onRequest
   const [showAddLocation, setShowAddLocation] = useState(false);
   const [insertAtPosition, setInsertAtPosition] = useState<number | null>(null);
   const [deletedLocation, setDeletedLocation] = useState<{ location: Location; name: string } | null>(null);
+  const [showMapsModal, setShowMapsModal] = useState(false);
 
   const { getDistanceTo } = useTracking();
   const { setNodeRef, isOver } = useDroppable({ id: day.id });
@@ -212,6 +214,15 @@ export default function DayColumn({ day, canEdit, projectId, onUpdate, onRequest
         </div>
 
         <div className="flex items-center gap-2 shrink-0" onClick={(e) => e.stopPropagation()}>
+          {day.locations.some((l) => l.latitude && l.longitude) && (
+            <button
+              onClick={() => setShowMapsModal(true)}
+              className="p-1.5 text-text-muted hover:text-accent hover:bg-accent/10 rounded-lg transition-colors"
+              title="View route in Maps"
+            >
+              <Route className="w-4 h-4" />
+            </button>
+          )}
           {canEdit && onShiftDay && (
             <div className="flex items-center gap-1 bg-bg-input border border-border rounded-lg px-1 py-0.5">
               <button
@@ -345,6 +356,14 @@ export default function DayColumn({ day, canEdit, projectId, onUpdate, onRequest
           message={`"${deletedLocation.name}" deleted`}
           onUndo={undoLocationDelete}
           onDismiss={dismissLocationDelete}
+        />
+      )}
+
+      {showMapsModal && (
+        <MapsRouteModal
+          locations={day.locations}
+          label={day.title || `Day ${day.day_number}`}
+          onClose={() => setShowMapsModal(false)}
         />
       )}
     </div>
