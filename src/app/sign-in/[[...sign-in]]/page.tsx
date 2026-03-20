@@ -1,6 +1,6 @@
 "use client";
 
-import { SignIn, useAuth } from "@clerk/nextjs";
+import { SignIn, useAuth, useSession } from "@clerk/nextjs";
 import { useSearchParams } from "next/navigation";
 import { Suspense, useEffect } from "react";
 
@@ -8,17 +8,23 @@ function SignInForm() {
   const searchParams = useSearchParams();
   const redirectUrl = searchParams.get("redirect_url") || "/dashboard";
   const { userId, getToken } = useAuth();
+  const { session } = useSession();
 
-  // Handle native app OAuth callback — redirect back to iOS app with session token
+  // Handle native app OAuth callback — redirect back to iOS app with session token + session ID
   useEffect(() => {
-    if (userId && redirectUrl?.startsWith("shootplanner://")) {
+    if (userId && session?.id && redirectUrl?.startsWith("shootplanner://")) {
       getToken().then((token) => {
         if (token) {
-          window.location.href = `${redirectUrl}?session_token=${token}`;
+          const params = new URLSearchParams({
+            session_token: token,
+            session_id: session.id,
+            user_id: userId,
+          });
+          window.location.href = `${redirectUrl}?${params.toString()}`;
         }
       });
     }
-  }, [userId, redirectUrl, getToken]);
+  }, [userId, session, redirectUrl, getToken]);
 
   return <SignIn forceRedirectUrl={redirectUrl} />;
 }
