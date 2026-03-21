@@ -2,8 +2,10 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import { useUser } from "@clerk/nextjs";
 import { Bell, Heart, MessageCircle, MapPin, Check, CheckCheck, CalendarDays } from "lucide-react";
 import { Notification, NotificationType } from "@/lib/types";
+import { supabase } from "@/lib/supabase";
 
 const typeIcons: Record<NotificationType, typeof Heart> = {
   reference_reaction: Heart,
@@ -48,6 +50,7 @@ export default function NotificationBell() {
   const [loading, setLoading] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const router = useRouter();
+  const { user } = useUser();
 
   const fetchUnreadCount = useCallback(async () => {
     try {
@@ -72,10 +75,40 @@ export default function NotificationBell() {
     setLoading(false);
   }, []);
 
-  // Poll unread count
+  // Realtime subscription for new notifications
+  useEffect(() => {
+    if (!user?.id) return;
+
+    const channel = supabase
+      .channel(`notifications-${user.id}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "notifications",
+          filter: `recipient_user_id=eq.${user.id}`,
+        },
+        (payload) => {
+          const newNotif = payload.new as Notification;
+          setUnreadCount((c) => c + 1);
+          setNotifications((prev) => {
+            if (prev.some((n) => n.id === newNotif.id)) return prev;
+            return [newNotif, ...prev];
+          });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user?.id]);
+
+  // Initial fetch + fallback polling (slower since realtime handles most updates)
   useEffect(() => {
     fetchUnreadCount();
-    const interval = setInterval(fetchUnreadCount, 30000);
+    const interval = setInterval(fetchUnreadCount, 60000);
     const handleFocus = () => fetchUnreadCount();
     window.addEventListener("focus", handleFocus);
     return () => {

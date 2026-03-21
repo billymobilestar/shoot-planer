@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useUser } from "@clerk/nextjs";
 import { MessageSquare, X, Send, ChevronDown } from "lucide-react";
 import { ChatMessage } from "@/lib/types";
+import { supabase } from "@/lib/supabase";
 
 interface Props {
   projectId: string;
@@ -107,12 +108,45 @@ export default function ChatBox({ projectId }: Props) {
     }
   }, [open, fetchMessages]);
 
-  // Polling
+  // Realtime subscription for new messages
+  useEffect(() => {
+    const channel = supabase
+      .channel(`chat-${projectId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "project_messages",
+          filter: `project_id=eq.${projectId}`,
+        },
+        (payload) => {
+          const newMsg = payload.new as ChatMessage;
+          setMessages((prev) => {
+            if (prev.some((m) => m.id === newMsg.id)) return prev;
+            return [newMsg, ...prev];
+          });
+          if (open) {
+            lastSeenRef.current = newMsg.created_at;
+            setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }), 100);
+          } else if (newMsg.user_id !== currentUserId) {
+            setUnreadCount((c) => c + 1);
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [projectId, open, currentUserId]);
+
+  // Fallback polling (in case realtime connection drops)
   useEffect(() => {
     if (open) {
-      pollRef.current = setInterval(pollNewMessages, 5000);
+      pollRef.current = setInterval(pollNewMessages, 30000);
     } else {
-      pollRef.current = setInterval(pollUnread, 15000);
+      pollRef.current = setInterval(pollUnread, 60000);
     }
     return () => {
       if (pollRef.current) clearInterval(pollRef.current);

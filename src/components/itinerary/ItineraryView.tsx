@@ -15,7 +15,7 @@ import {
 } from "@dnd-kit/core";
 import { Plus, CalendarDays, MapPin, Route, Clock, List, Calendar, FilmIcon, Car, Navigation, Loader2, Home, X as XIcon, CheckCircle2, ArrowRight } from "lucide-react";
 import { ShootDayWithLocations, Location } from "@/lib/types";
-
+import { supabase } from "@/lib/supabase";
 import { useTracking } from "@/components/tracking/TrackingProvider";
 import TrackingBanner from "@/components/tracking/TrackingBanner";
 import DayColumn from "./DayColumn";
@@ -111,6 +111,20 @@ export default function ItineraryView({ projectId, canEdit, startDate, onDaysCou
   useEffect(() => {
     fetchDays();
   }, [fetchDays]);
+
+  // Realtime: refresh when locations, days, or scenes change
+  useEffect(() => {
+    const channel = supabase
+      .channel(`itinerary-${projectId}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "locations", filter: `project_id=eq.${projectId}` }, () => fetchDays())
+      .on("postgres_changes", { event: "*", schema: "public", table: "shoot_days", filter: `project_id=eq.${projectId}` }, () => fetchDays())
+      .on("postgres_changes", { event: "*", schema: "public", table: "scenes", filter: `project_id=eq.${projectId}` }, () => fetchDays())
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [projectId, fetchDays]);
 
   // Check if user has home address set
   useEffect(() => {
