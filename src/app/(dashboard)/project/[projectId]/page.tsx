@@ -3,7 +3,7 @@
 import { useState, useEffect, use, useRef } from "react";
 import { useUser } from "@clerk/nextjs";
 import { useRouter, useSearchParams } from "next/navigation";
-import { MapPin, Camera, ListChecks, Users, ArrowLeft, Pencil, Check, X, Upload, Download, CalendarDays, ArrowRight, Film } from "lucide-react";
+import { MapPin, Camera, ListChecks, Users, ArrowLeft, Pencil, Check, X, Upload, Download, CalendarDays, ArrowRight, Film, Trash2, AlertTriangle } from "lucide-react";
 import { Project, ShootDayWithLocations } from "@/lib/types";
 import ItineraryView from "@/components/itinerary/ItineraryView";
 import ReferencesView from "@/components/references/ReferencesView";
@@ -50,6 +50,9 @@ export default function ProjectPage({ params }: { params: Promise<{ projectId: s
   const [uploadingCover, setUploadingCover] = useState(false);
   const [daysCount, setDaysCount] = useState(0);
   const [progress, setProgress] = useState({ completed: 0, total: 0 });
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleteConfirmName, setDeleteConfirmName] = useState("");
+  const [deleting, setDeleting] = useState(false);
   const coverInputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
 
@@ -134,6 +137,17 @@ export default function ProjectPage({ params }: { params: Promise<{ projectId: s
     e.target.value = "";
   }
 
+  async function handleDeleteProject() {
+    setDeleting(true);
+    const res = await fetch(`/api/projects/${projectId}`, { method: "DELETE" });
+    if (res.ok) {
+      router.push("/dashboard");
+    } else {
+      setDeleting(false);
+      setShowDeleteConfirm(false);
+    }
+  }
+
   function switchTab(id: TabId) {
     setActiveTab(id);
     window.history.replaceState(null, "", `#${id}`);
@@ -167,14 +181,26 @@ export default function ProjectPage({ params }: { params: Promise<{ projectId: s
           <ArrowLeft className="w-4 h-4" />
           Back to Projects
         </button>
-        <a
-          href={`/api/projects/${projectId}/export`}
-          download
-          className="flex items-center gap-1.5 text-text-secondary hover:text-text-primary transition-colors text-sm"
-        >
-          <Download className="w-4 h-4" />
-          <span className="hidden sm:inline">Export</span>
-        </a>
+        <div className="flex items-center gap-3">
+          <a
+            href={`/api/projects/${projectId}/export`}
+            download
+            className="flex items-center gap-1.5 text-text-secondary hover:text-text-primary transition-colors text-sm"
+          >
+            <Download className="w-4 h-4" />
+            <span className="hidden sm:inline">Export</span>
+          </a>
+          {project?.role === "owner" && (
+            <button
+              onClick={() => setShowDeleteConfirm(true)}
+              className="flex items-center gap-1.5 text-text-muted hover:text-danger transition-colors text-sm"
+              title="Delete project"
+            >
+              <Trash2 className="w-4 h-4" />
+              <span className="hidden sm:inline">Delete</span>
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Cover Photo + Header */}
@@ -401,6 +427,57 @@ export default function ProjectPage({ params }: { params: Promise<{ projectId: s
       {activeTab === "team" && <TeamView projectId={projectId} canEdit={canEdit} isOwner={project.role === "owner"} />}
 
       <ChatBox projectId={projectId} />
+
+      {/* Delete Project Confirmation Modal */}
+      {showDeleteConfirm && project && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={() => !deleting && setShowDeleteConfirm(false)}>
+          <div className="bg-bg-card border border-border rounded-xl p-6 w-full max-w-md mx-4" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-lg bg-danger/10 flex items-center justify-center shrink-0">
+                <AlertTriangle className="w-5 h-5 text-danger" />
+              </div>
+              <div>
+                <h2 className="text-lg font-semibold text-text-primary">Delete Project</h2>
+                <p className="text-sm text-text-muted">This action cannot be undone.</p>
+              </div>
+            </div>
+
+            <p className="text-sm text-text-secondary mb-4">
+              This will permanently delete <strong className="text-text-primary">{project.name}</strong> and all its data — days, locations, scenes, shots, references, team members, and messages.
+            </p>
+
+            <div className="mb-4">
+              <label className="block text-sm text-text-secondary mb-1.5">
+                Type <strong className="text-text-primary">{project.name}</strong> to confirm
+              </label>
+              <input
+                value={deleteConfirmName}
+                onChange={(e) => setDeleteConfirmName(e.target.value)}
+                placeholder={project.name}
+                className="w-full bg-bg-input border border-border rounded-lg px-4 py-2.5 text-text-primary placeholder:text-text-muted focus:outline-none focus:border-danger"
+                autoFocus
+              />
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => { setShowDeleteConfirm(false); setDeleteConfirmName(""); }}
+                disabled={deleting}
+                className="flex-1 bg-bg-card hover:bg-bg-card-hover border border-border text-text-primary rounded-lg px-4 py-2.5 text-sm transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDeleteProject}
+                disabled={deleteConfirmName !== project.name || deleting}
+                className="flex-1 bg-danger hover:bg-danger/80 text-white rounded-lg px-4 py-2.5 text-sm font-medium transition-colors disabled:opacity-50"
+              >
+                {deleting ? "Deleting..." : "Delete Project"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
     </TrackingProvider>
   );
